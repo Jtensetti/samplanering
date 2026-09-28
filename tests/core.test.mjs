@@ -1,46 +1,188 @@
-import test from 'node:test';
-import assert from 'node:assert/strict';
-import {mkdtempSync,rmSync} from 'node:fs';
-import {tmpdir} from 'node:os';
-import {join} from 'node:path';
-import {createApp} from '../server/app.mjs';
-const password='Ett riktigt testlösenord!';
-test('team isolation, invitations, per-block concurrency, persistence and permissions',async()=>{
- const dir=mkdtempSync(join(tmpdir(),'samplanering-'));const instance=createApp({dataDir:dir,testing:true});const server=instance.app.listen(0);await new Promise(r=>server.once('listening',r));const base='http://127.0.0.1:'+server.address().port;
- const client=()=>{let cookie='';return async(path,method='GET',body,version)=>{const r=await fetch(base+'/api'+path,{method,headers:{...(cookie?{Cookie:cookie}:{}),...(body?{'Content-Type':'application/json'}:{}),...(version?{'If-Match':String(version)}:{})},body:body?JSON.stringify(body):undefined});if(r.headers.get('set-cookie'))cookie=r.headers.get('set-cookie').split(';')[0];const data=await r.json();return {status:r.status,data}}};
- try{
- const a=client(),b=client(),outsider=client(),reader=client();
- const owner=(await a('/register','POST',{email:'a@example.test',name:'Anna',password})).data;
- assert.ok(owner.id);assert.equal((await a('/me')).status,200);
- await b('/register','POST',{email:'b@example.test',name:'Bo',password});
- await outsider('/register','POST',{email:'outsider@example.test',name:'Utomstående',password});
- await reader('/register','POST',{email:'reader@example.test',name:'Läsare',password});
- const team=(await a('/teams','POST',{name:'Testteam'})).data;
- const p=(await a('/records','POST',{teamId:team.id,kind:'plan',body:{title:'Införande'}})).data;
- const state=(await a('/state?team='+team.id)).data;assert.equal(state.records.filter(r=>r.kind==='bucket').length,3);
- const bucket=state.records.find(r=>r.kind==='bucket');
- const card=(await a('/records','POST',{teamId:team.id,kind:'card',parentId:p.id,body:{title:'Testa system',bucketId:bucket.id,assignees:[owner.id]}})).data;
- const block=(await a('/records','POST',{teamId:team.id,kind:'block',parentId:card.id,body:{type:'text',text:'Första'}})).data;
- assert.equal((await outsider('/state?team='+team.id)).status,403);
- assert.equal((await outsider('/records/'+block.id,'PATCH',{text:'intrång'},1)).status,403);
- const inv=(await a(`/teams/${team.id}/invites`,'POST',{role:'editor'})).data;
- assert.equal((await b('/join','POST',{token:inv.token})).status,200);
- assert.equal((await b('/join','POST',{token:inv.token})).status,410);
- assert.equal((await b('/records/'+block.id,'PATCH',{text:'Bo skrev'},1)).status,200);
- assert.equal((await a('/records/'+block.id,'PATCH',{text:'Gammalt utkast'},1)).status,409);
- assert.equal((await a('/state?team='+team.id)).data.records.find(r=>r.id===block.id).body.text,'Bo skrev');
- assert.equal((await a('/records/'+card.id,'PATCH',{start:'2026-09-29',due:'2026-09-28'},1)).status,400);
- assert.equal((await a('/records/'+card.id,'PATCH',{dependencies:[card.id]},1)).status,400);
- const inv2=(await a(`/teams/${team.id}/invites`,'POST',{role:'viewer'})).data;
- await reader('/join','POST',{token:inv2.token});
- assert.equal((await reader('/records/'+block.id,'PATCH',{text:'Fel'},2)).status,403);
- assert.equal((await reader('/state?team='+team.id)).status,200);
- assert.equal((await a('/records/'+block.id+'/history')).data.length,2);
- const deletion=await b('/records/'+block.id,'DELETE',undefined,2);assert.equal(deletion.status,200);
- assert.equal((await b('/records/'+block.id+'/restore','POST',undefined,3)).status,200);
- assert.equal((await a('/records','POST',{teamId:team.id,kind:'block',parentId:p.id,body:{type:'text'}})).status,400);
- assert.equal((await a('/records/'+card.id,'PATCH',{due:'2026-02-31'},1)).status,400);
- await a(`/teams/${team.id}/members/${(await b('/me')).data.id}`,'DELETE');assert.equal((await b('/state?team='+team.id)).status,403);
- await new Promise(r=>server.close(r));instance.close();const restored=createApp({dataDir:dir,testing:true});assert.equal(restored.db.prepare('SELECT COUNT(*) n FROM records WHERE deleted IS NULL').get().n,6);restored.close();
- }finally{if(server.listening){await new Promise(r=>server.close(r));instance.close()}rmSync(dir,{recursive:true,force:true})}
+import test from "node:test";
+import assert from "node:assert/strict";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { createApp } from "../server/app.mjs";
+const password = "Ett riktigt testlösenord!";
+test("team isolation, invitations, per-block concurrency, persistence and permissions", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "samplanering-"));
+  const instance = createApp({ dataDir: dir, testing: true });
+  const server = instance.app.listen(0);
+  await new Promise((r) => server.once("listening", r));
+  const base = "http://127.0.0.1:" + server.address().port;
+  const client = () => {
+    let cookie = "";
+    return async (path, method = "GET", body, version) => {
+      const r = await fetch(base + "/api" + path, {
+        method,
+        headers: {
+          ...(cookie ? { Cookie: cookie } : {}),
+          ...(body ? { "Content-Type": "application/json" } : {}),
+          ...(version ? { "If-Match": String(version) } : {}),
+        },
+        body: body ? JSON.stringify(body) : undefined,
+      });
+      if (r.headers.get("set-cookie"))
+        cookie = r.headers.get("set-cookie").split(";")[0];
+      const data = await r.json();
+      return { status: r.status, data };
+    };
+  };
+  try {
+    const a = client(),
+      b = client(),
+      outsider = client(),
+      reader = client();
+    const owner = (
+      await a("/register", "POST", {
+        email: "a@example.test",
+        name: "Anna",
+        password,
+      })
+    ).data;
+    assert.ok(owner.id);
+    assert.equal((await a("/me")).status, 200);
+    await b("/register", "POST", {
+      email: "b@example.test",
+      name: "Bo",
+      password,
+    });
+    await outsider("/register", "POST", {
+      email: "outsider@example.test",
+      name: "Utomstående",
+      password,
+    });
+    await reader("/register", "POST", {
+      email: "reader@example.test",
+      name: "Läsare",
+      password,
+    });
+    const team = (await a("/teams", "POST", { name: "Testteam" })).data;
+    const p = (
+      await a("/records", "POST", {
+        teamId: team.id,
+        kind: "plan",
+        body: { title: "Införande" },
+      })
+    ).data;
+    const state = (await a("/state?team=" + team.id)).data;
+    assert.equal(state.records.filter((r) => r.kind === "bucket").length, 3);
+    const bucket = state.records.find((r) => r.kind === "bucket");
+    const card = (
+      await a("/records", "POST", {
+        teamId: team.id,
+        kind: "card",
+        parentId: p.id,
+        body: {
+          title: "Testa system",
+          bucketId: bucket.id,
+          assignees: [owner.id],
+        },
+      })
+    ).data;
+    const block = (
+      await a("/records", "POST", {
+        teamId: team.id,
+        kind: "block",
+        parentId: card.id,
+        body: { type: "text", text: "Första" },
+      })
+    ).data;
+    assert.equal((await outsider("/state?team=" + team.id)).status, 403);
+    assert.equal(
+      (await outsider("/records/" + block.id, "PATCH", { text: "intrång" }, 1))
+        .status,
+      403,
+    );
+    const inv = (
+      await a(`/teams/${team.id}/invites`, "POST", { role: "editor" })
+    ).data;
+    assert.equal((await b("/join", "POST", { token: inv.token })).status, 200);
+    assert.equal((await b("/join", "POST", { token: inv.token })).status, 410);
+    assert.equal(
+      (await b("/records/" + block.id, "PATCH", { text: "Bo skrev" }, 1))
+        .status,
+      200,
+    );
+    assert.equal(
+      (await a("/records/" + block.id, "PATCH", { text: "Gammalt utkast" }, 1))
+        .status,
+      409,
+    );
+    assert.equal(
+      (await a("/state?team=" + team.id)).data.records.find(
+        (r) => r.id === block.id,
+      ).body.text,
+      "Bo skrev",
+    );
+    assert.equal(
+      (
+        await a(
+          "/records/" + card.id,
+          "PATCH",
+          { start: "2026-09-29", due: "2026-09-28" },
+          1,
+        )
+      ).status,
+      400,
+    );
+    assert.equal(
+      (await a("/records/" + card.id, "PATCH", { dependencies: [card.id] }, 1))
+        .status,
+      400,
+    );
+    const inv2 = (
+      await a(`/teams/${team.id}/invites`, "POST", { role: "viewer" })
+    ).data;
+    await reader("/join", "POST", { token: inv2.token });
+    assert.equal(
+      (await reader("/records/" + block.id, "PATCH", { text: "Fel" }, 2))
+        .status,
+      403,
+    );
+    assert.equal((await reader("/state?team=" + team.id)).status, 200);
+    assert.equal((await a("/records/" + block.id + "/history")).data.length, 2);
+    const deletion = await b("/records/" + block.id, "DELETE", undefined, 2);
+    assert.equal(deletion.status, 200);
+    assert.equal(
+      (await b("/records/" + block.id + "/restore", "POST", undefined, 3))
+        .status,
+      200,
+    );
+    assert.equal(
+      (
+        await a("/records", "POST", {
+          teamId: team.id,
+          kind: "block",
+          parentId: p.id,
+          body: { type: "text" },
+        })
+      ).status,
+      400,
+    );
+    assert.equal(
+      (await a("/records/" + card.id, "PATCH", { due: "2026-02-31" }, 1))
+        .status,
+      400,
+    );
+    await a(`/teams/${team.id}/members/${(await b("/me")).data.id}`, "DELETE");
+    assert.equal((await b("/state?team=" + team.id)).status, 403);
+    await new Promise((r) => server.close(r));
+    instance.close();
+    const restored = createApp({ dataDir: dir, testing: true });
+    assert.equal(
+      restored.db
+        .prepare("SELECT COUNT(*) n FROM records WHERE deleted IS NULL")
+        .get().n,
+      6,
+    );
+    restored.close();
+  } finally {
+    if (server.listening) {
+      await new Promise((r) => server.close(r));
+      instance.close();
+    }
+    rmSync(dir, { recursive: true, force: true });
+  }
 });

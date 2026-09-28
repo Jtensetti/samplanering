@@ -1,0 +1,34 @@
+name: Verify
+on:
+  push:
+    branches: [main, codex/samplanering-app]
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run check
+      - run: npm run format:check
+      - run: npm test
+      - run: npm run build
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:ui
+      - run: docker build -t samplanering-test .
+      - name: Check container startup
+        run: |
+          docker run -d --name samplanering-test -p 127.0.0.1:3000:3000 -e NODE_ENV=development -e APP_ORIGIN=http://localhost:3000 samplanering-test
+          curl --fail --retry 10 --retry-connrefused --retry-delay 1 http://localhost:3000/api/health
+      - name: Stop test container
+        if: always()
+        run: docker rm -f samplanering-test || true

@@ -1,2 +1,27 @@
-import {defineConfig} from '@playwright/test';
-export default defineConfig({testDir:'./tests/ui',workers:1,timeout:30000,use:{baseURL:'http://127.0.0.1:3310',headless:true,launchOptions:process.env.CHROMIUM_PATH?{executablePath:process.env.CHROMIUM_PATH,args:['--no-sandbox','--disable-gpu']}:undefined,trace:'retain-on-failure'},webServer:{command:'node server/index.mjs',env:{PORT:'3310',DATA_DIR:'.test-data',APP_ORIGIN:'http://127.0.0.1:3310'},url:'http://127.0.0.1:3310/api/health',reuseExistingServer:false}});
+import { defineConfig } from "@playwright/test";
+export default defineConfig({
+  testDir: "./tests/ui",
+  workers: 1,
+  timeout: 30000,
+  use: {
+    baseURL: "http://127.0.0.1:3310",
+    headless: true,
+    launchOptions: process.env.CHROMIUM_PATH
+      ? {
+          executablePath: process.env.CHROMIUM_PATH,
+          args: ["--no-sandbox", "--disable-gpu"],
+        }
+      : undefined,
+    trace: "retain-on-failure",
+  },
+  webServer: {
+    command: "node server/index.mjs",
+    env: {
+      PORT: "3310",
+      DATA_DIR: ".test-data",
+      APP_ORIGIN: "http://127.0.0.1:3310",
+    },
+    url: "http://127.0.0.1:3310/api/health",
+    reuseExistingServer: false,
+  },
+});

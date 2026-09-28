@@ -1,9 +1,9 @@
-import { DatabaseSync } from 'node:sqlite';
-import { mkdirSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { DatabaseSync } from "node:sqlite";
+import { mkdirSync } from "node:fs";
+import { resolve } from "node:path";
 export function openDatabase(dir) {
-  mkdirSync(dir,{recursive:true});
-  const db=new DatabaseSync(resolve(dir,'samplanering.sqlite'));
+  mkdirSync(dir, { recursive: true });
+  const db = new DatabaseSync(resolve(dir, "samplanering.sqlite"));
   db.exec(`PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON; PRAGMA busy_timeout=5000;
     CREATE TABLE IF NOT EXISTS users(id TEXT PRIMARY KEY,email TEXT NOT NULL UNIQUE,name TEXT NOT NULL,password TEXT NOT NULL);
     CREATE TABLE IF NOT EXISTS sessions(hash TEXT PRIMARY KEY,user_id TEXT NOT NULL REFERENCES users(id),expires INTEGER NOT NULL);
