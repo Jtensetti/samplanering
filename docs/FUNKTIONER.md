@@ -20,4 +20,4 @@
 | Uppföljning         | Mål med manuellt uppnått värde, kortfördelning, summering av talfält och självskattningsdiagram                     | Numeriska fält summeras separat; ingen valutakonvertering                                                                 |
 | Tid och belastning  | Uppskattade timmar, tidtagning, manuell tidslogg, timmar per ansvarig                                               | Uppskattning delas lika mellan ansvariga; tar inte hänsyn till arbetsschema eller ledighet. Timer stoppas efter 24 timmar |
 
-Första skärmen prioriterar **skapa plan → lägg till uppgift → börja i dokumentet**. Extra verktyg samlas under **Planera och följ upp**, medan kortets extra inställningar fälls ut vid behov. Detta är ett designval att utvärdera i verkliga användartester, inte ett bevis på att intuitionsmålet redan är nått.
+Första skärmen prioriterar **skapa plan → lägg till uppgift → börja i dokumentet**. Extra verktyg samlas på fliken **Planverktyg**, medan kortets extra inställningar fälls ut vid behov. Detta är ett designval att utvärdera i verkliga användartester, inte ett bevis på att intuitionsmålet redan är nått.

@@ -11,8 +11,6 @@ import {
   ChevronLeft,
   ChevronRight,
   Archive,
-  History,
-  Bell,
   Save,
 } from "lucide-react";
 import { api, useApp, today } from "./store";
@@ -23,8 +21,8 @@ import {
   Field,
   NewName,
   DraftText,
-  Disclosure,
   Empty,
+  Tabs,
 } from "./ui";
 import { TaskList, TaskCard } from "./App";
 import { AdvancedPlan } from "./advanced";
@@ -98,6 +96,7 @@ export function Plan({ plan, onOpen, onBack }) {
     [newTask, setNewTask] = useState(""),
     [query, setQuery] = useState(""),
     [mode, setMode] = useState("board"),
+    [section, setSection] = useState("work"),
     [assignee, setAssignee] = useState(""),
     [tag, setTag] = useState(""),
     [group, setGroup] = useState("bucket"),
@@ -173,179 +172,218 @@ export function Plan({ plan, onOpen, onBack }) {
         <ArrowLeft size={15} />
         Alla planer
       </button>
-      <div className="page-heading">
+      <div className={`page-heading plan-banner ${plan.body.color}`}>
         <div>
-          <p className="eyebrow">PLAN</p>
-          <DraftText
-            className="title-input"
-            label="Planens namn"
-            disabled={!writable}
-            value={plan.body.title}
-            version={plan.version}
-            onSave={(v, version) => patch(plan, { title: v }, version)}
-          />
+          <h1>{plan.body.title}</h1>
+          <p>
+            {plan.body.description ||
+              `${source.length} uppgifter · ${source.filter((c) => c.body.done).length} klara`}
+          </p>
         </div>
-        <div className="heading-actions">
-          <Button icon={SlidersHorizontal} onClick={() => setSettings(true)}>
-            Anpassa plan
-          </Button>
-          {writable && (
-            <Button
-              variant="primary"
-              icon={Plus}
-              onClick={() => setNewTask(buckets[0]?.id)}
-            >
-              Lägg till uppgift
-            </Button>
-          )}
-        </div>
-      </div>
-      <div className="view-toolbar">
-        <div className="segmented">
-          {[
-            ["board", "Tavla", LayoutGrid],
-            ["list", "Lista", List],
-            ["calendar", "Kalender", CalendarDays],
-            ["timeline", "Tidslinje", ChartNoAxesGantt],
-          ].map(([id, label, icon]) => (
-            <Button
-              key={id}
-              variant={mode === id ? "selected" : ""}
-              icon={icon}
-              onClick={() => setMode(id)}
-            >
-              {label}
-            </Button>
-          ))}
-        </div>
-        <Button onClick={() => setFilters(!filters)} aria-expanded={filters}>
-          Filtrera{assignee || tag ? " •" : ""}
+        <Button icon={SlidersHorizontal} onClick={() => setSettings(true)}>
+          Anpassa plan
         </Button>
-        <label className="search">
-          <Search size={17} />
-          <input
-            aria-label="Sök uppgifter"
-            placeholder="Sök i kort och dokument…"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-          />
-        </label>
       </div>
-      {filters && (
-        <div className="filter-row">
-          <Field label="Ansvarig">
-            <select
-              value={assignee}
-              onChange={(e) => setAssignee(e.target.value)}
-            >
-              <option value="">Alla personer</option>
-              <option value="none">Utan ansvarig</option>
-              {state.members.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.name}
-                </option>
-              ))}
-            </select>
-          </Field>
-          <Field label="Etikett">
-            <select value={tag} onChange={(e) => setTag(e.target.value)}>
-              <option value="">Alla etiketter</option>
-              {[...new Set(source.flatMap((c) => c.body.tags))].map((t) => (
-                <option key={t}>{t}</option>
-              ))}
-            </select>
-          </Field>
-          <Field label="Gruppera tavlan efter">
-            <select value={group} onChange={(e) => setGroup(e.target.value)}>
-              <option value="bucket">Kolumn</option>
-              <option value="assignee">Ansvarig</option>
-              <option value="priority">Prioritet</option>
-            </select>
-          </Field>
-          <Button
-            onClick={() => {
-              setQuery("");
-              setAssignee("");
-              setTag("");
-              setGroup("bucket");
-            }}
-          >
-            Rensa filter
-          </Button>
-          {writable && (
-            <Button icon={Save} onClick={() => setSaveView(true)}>
-              Spara vy
-            </Button>
-          )}
-        </div>
-      )}
-      {views.length > 0 && (
-        <div className="saved-views">
-          <span>Sparade vyer</span>
-          {views.map((v) => (
-            <Button
-              key={v.id}
-              onClick={() => {
-                setMode(v.body.mode);
-                setQuery(v.body.query);
-                setAssignee(v.body.assignee);
-                setTag(v.body.tag);
-                setGroup(v.body.group);
-              }}
-            >
-              {v.body.title}
-            </Button>
-          ))}
-        </div>
-      )}
-      {mode === "list" && <TaskList cards={cards} onOpen={onOpen} />}{" "}
-      {mode === "calendar" && <Calendar cards={cards} onOpen={onOpen} />}{" "}
-      {mode === "timeline" && <Timeline cards={cards} onOpen={onOpen} />}{" "}
-      {mode === "board" && (
-        <div className="board">
-          {groups.map((g) => (
-            <section
-              key={g.id}
-              className="bucket"
-              onDragOver={(e) => {
-                if (writable) e.preventDefault();
-              }}
-              onDrop={(e) => act(() => drop(e, g))}
-            >
-              <div className="bucket-title">
-                <span className={"status-dot " + (g.done ? "green" : "")} />
-                <h2>{g.name}</h2>
-                <span className="count">{g.cards.length}</span>
-              </div>
-              {g.cards.map((c) => (
-                <TaskCard key={c.id} card={c} onOpen={onOpen} />
-              ))}
-              {writable && group === "bucket" && (
-                <button className="add-card" onClick={() => setNewTask(g.id)}>
-                  <Plus size={16} />
+      <Tabs
+        id={`plan-${plan.id}`}
+        label="Planens innehåll"
+        value={section}
+        onChange={setSection}
+        items={[
+          { id: "work", label: "Uppgifter" },
+          { id: "tools", label: "Planverktyg" },
+        ]}
+      />
+      <div
+        id={`plan-${plan.id}-${section}-panel`}
+        role="tabpanel"
+        aria-labelledby={`plan-${plan.id}-${section}-tab`}
+      >
+        {section === "tools" ? (
+          <AdvancedPlan plan={plan} onOpen={onOpen} />
+        ) : (
+          <>
+            <div className="work-actions">
+              {writable && (
+                <Button
+                  variant="primary"
+                  icon={Plus}
+                  onClick={() => setNewTask(buckets[0]?.id)}
+                >
                   Lägg till uppgift
-                </button>
+                </Button>
               )}
-            </section>
-          ))}
-          {writable && group === "bucket" && (
-            <button className="add-bucket" onClick={() => setSettings(true)}>
-              <Plus size={17} />
-              Lägg till kolumn
-            </button>
-          )}
-        </div>
-      )}
-      <div className="plan-bottom">
-        <span>
-          {cards.length} uppgifter · {cards.filter((c) => c.body.done).length}{" "}
-          klara
-        </span>
-        <Button icon={Archive} onClick={() => setArchive(true)}>
-          Arkiverade uppgifter
-        </Button>
+              <span>
+                {cards.length === source.length
+                  ? ""
+                  : `${cards.length} av ${source.length} uppgifter visas`}
+              </span>
+            </div>
+            <div className="view-toolbar">
+              <div className="segmented">
+                {[
+                  ["board", "Tavla", LayoutGrid],
+                  ["list", "Lista", List],
+                  ["calendar", "Kalender", CalendarDays],
+                  ["timeline", "Tidslinje", ChartNoAxesGantt],
+                ].map(([id, label, icon]) => (
+                  <Button
+                    key={id}
+                    variant={mode === id ? "selected" : ""}
+                    aria-pressed={mode === id}
+                    icon={icon}
+                    onClick={() => setMode(id)}
+                  >
+                    {label}
+                  </Button>
+                ))}
+              </div>
+              <Button
+                onClick={() => setFilters(!filters)}
+                aria-expanded={filters}
+              >
+                Filtrera{assignee || tag ? " •" : ""}
+              </Button>
+              <label className="search">
+                <Search size={17} />
+                <input
+                  aria-label="Sök uppgifter"
+                  placeholder="Sök i kort och dokument…"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                />
+              </label>
+            </div>
+            {filters && (
+              <div className="filter-row">
+                <Field label="Ansvarig">
+                  <select
+                    value={assignee}
+                    onChange={(e) => setAssignee(e.target.value)}
+                  >
+                    <option value="">Alla personer</option>
+                    <option value="none">Utan ansvarig</option>
+                    {state.members.map((m) => (
+                      <option key={m.id} value={m.id}>
+                        {m.name}
+                      </option>
+                    ))}
+                  </select>
+                </Field>
+                <Field label="Etikett">
+                  <select value={tag} onChange={(e) => setTag(e.target.value)}>
+                    <option value="">Alla etiketter</option>
+                    {[...new Set(source.flatMap((c) => c.body.tags))].map(
+                      (t) => (
+                        <option key={t}>{t}</option>
+                      ),
+                    )}
+                  </select>
+                </Field>
+                <Field label="Gruppera tavlan efter">
+                  <select
+                    value={group}
+                    onChange={(e) => setGroup(e.target.value)}
+                  >
+                    <option value="bucket">Kolumn</option>
+                    <option value="assignee">Ansvarig</option>
+                    <option value="priority">Prioritet</option>
+                  </select>
+                </Field>
+                <Button
+                  onClick={() => {
+                    setQuery("");
+                    setAssignee("");
+                    setTag("");
+                    setGroup("bucket");
+                  }}
+                >
+                  Rensa filter
+                </Button>
+                {writable && (
+                  <Button icon={Save} onClick={() => setSaveView(true)}>
+                    Spara vy
+                  </Button>
+                )}
+              </div>
+            )}
+            {views.length > 0 && (
+              <div className="saved-views">
+                <span>Sparade vyer</span>
+                {views.map((v) => (
+                  <Button
+                    key={v.id}
+                    onClick={() => {
+                      setMode(v.body.mode);
+                      setQuery(v.body.query);
+                      setAssignee(v.body.assignee);
+                      setTag(v.body.tag);
+                      setGroup(v.body.group);
+                    }}
+                  >
+                    {v.body.title}
+                  </Button>
+                ))}
+              </div>
+            )}
+            {mode === "list" && <TaskList cards={cards} onOpen={onOpen} />}{" "}
+            {mode === "calendar" && <Calendar cards={cards} onOpen={onOpen} />}{" "}
+            {mode === "timeline" && <Timeline cards={cards} onOpen={onOpen} />}{" "}
+            {mode === "board" && (
+              <div className="board">
+                {groups.map((g) => (
+                  <section
+                    key={g.id}
+                    className="bucket"
+                    onDragOver={(e) => {
+                      if (writable) e.preventDefault();
+                    }}
+                    onDrop={(e) => act(() => drop(e, g))}
+                  >
+                    <div className="bucket-title">
+                      <span
+                        className={"status-dot " + (g.done ? "green" : "")}
+                      />
+                      <h2>{g.name}</h2>
+                      <span className="count">{g.cards.length}</span>
+                    </div>
+                    {g.cards.map((c) => (
+                      <TaskCard key={c.id} card={c} onOpen={onOpen} />
+                    ))}
+                    {writable && group === "bucket" && (
+                      <button
+                        className="add-card"
+                        onClick={() => setNewTask(g.id)}
+                      >
+                        <Plus size={16} />
+                        Lägg till uppgift
+                      </button>
+                    )}
+                  </section>
+                ))}
+                {writable && group === "bucket" && (
+                  <button
+                    className="add-bucket"
+                    onClick={() => setSettings(true)}
+                  >
+                    <Plus size={17} />
+                    Lägg till kolumn
+                  </button>
+                )}
+              </div>
+            )}
+            <div className="plan-bottom">
+              <span>
+                {cards.length} uppgifter ·{" "}
+                {cards.filter((c) => c.body.done).length} klara
+              </span>
+              <Button icon={Archive} onClick={() => setArchive(true)}>
+                Arkiverade uppgifter
+              </Button>
+            </div>
+          </>
+        )}
       </div>
-      <AdvancedPlan plan={plan} onOpen={onOpen} />
       {newTask && (
         <NewName
           title="Ny uppgift"
@@ -540,6 +578,16 @@ export function PlanSettings({ plan, onClose, onBack }) {
     [options, setOptions] = useState("");
   return (
     <Modal title="Anpassa plan" wide onClose={onClose}>
+      <div className="field">
+        <span>Planens namn</span>
+        <DraftText
+          label="Planens namn"
+          disabled={!writable}
+          value={plan.body.title}
+          version={plan.version}
+          onSave={(v, version) => patch(plan, { title: v }, version)}
+        />
+      </div>
       <Field label="Färg">
         <select
           disabled={!writable}

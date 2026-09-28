@@ -1,7 +1,14 @@
-import React, { useState } from "react";
-import { Plus, Trash2, ArrowUp, ArrowDown, Paperclip } from "lucide-react";
+import React, { useEffect, useState } from "react";
+import {
+  Plus,
+  Trash2,
+  ArrowUp,
+  ArrowDown,
+  Paperclip,
+  MoreHorizontal,
+} from "lucide-react";
 import { api, useApp } from "./store";
-import { Button, IconButton, Field, DraftText } from "./ui";
+import { Button, IconButton, DraftText } from "./ui";
 export const blockNames = {
   text: "Text",
   heading: "Rubrik",
@@ -18,7 +25,8 @@ export function Document({ record }) {
       useApp(),
     blocks = childrenOf(record.id, "block");
   const [adding, setAdding] = useState(false),
-    [uploading, setUploading] = useState(false);
+    [uploading, setUploading] = useState(false),
+    [firstDraft, setFirstDraft] = useState("");
   async function add(type) {
     await create(
       "block",
@@ -112,11 +120,21 @@ export function Document({ record }) {
           next={blocks[i + 1]}
         />
       ))}
-      {!blocks.length && (
-        <p className="muted document-hint">
-          Samla instruktioner, svar och anteckningar här.
-        </p>
-      )}
+      {(!blocks.length || firstDraft) &&
+        (writable ? (
+          <FirstNote
+            record={record}
+            text={firstDraft}
+            onChange={setFirstDraft}
+            order={
+              blocks.length
+                ? Math.max(...blocks.map((b) => b.body.order)) + 1
+                : 0
+            }
+          />
+        ) : (
+          <p className="muted document-hint">Inget dokumentinnehåll ännu.</p>
+        ))}
       {writable && (
         <div className="document-add">
           <Button
@@ -170,31 +188,85 @@ export function Document({ record }) {
     </section>
   );
 }
+function FirstNote({ record, text, onChange, order }) {
+  const { create, act } = useApp();
+  const [busy, setBusy] = useState(false);
+  useEffect(() => {
+    if (!text) return;
+    const warn = (event) => {
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [text]);
+  return (
+    <form
+      className="first-note"
+      data-dirty={Boolean(text)}
+      onSubmit={async (event) => {
+        event.preventDefault();
+        if (!text.trim() || busy) return;
+        setBusy(true);
+        await act(async () => {
+          await create("block", { type: "text", text, order }, record.id);
+          onChange("");
+        });
+        setBusy(false);
+      }}
+    >
+      <textarea
+        aria-label="Börja skriva i dokumentet"
+        placeholder="Vad behöver göras? Skriv instruktioner eller börja anteckna här…"
+        value={text}
+        disabled={busy}
+        onChange={(e) => onChange(e.target.value)}
+        maxLength={50000}
+      />
+      {text && (
+        <div className="first-note-actions">
+          <span>Lägg till för att spara</span>
+          <Button variant="primary" disabled={busy || !text.trim()}>
+            {busy ? "Lägger till…" : "Lägg till text"}
+          </Button>
+        </div>
+      )}
+    </form>
+  );
+}
 function Block({ block: b, previous, next }) {
   const { patch, remove, act, writable } = useApp();
   const d = b.body;
   const [newItem, setNewItem] = useState("");
   const save = (body, version) => patch(b, body, version);
   const tools = writable && (
-    <div className="block-tools">
-      <IconButton
-        label="Flytta upp"
-        icon={ArrowUp}
-        disabled={!previous}
-        onClick={() => act(() => save({ order: previous.body.order - 0.5 }))}
-      />
-      <IconButton
-        label="Flytta ned"
-        icon={ArrowDown}
-        disabled={!next}
-        onClick={() => act(() => save({ order: next.body.order + 0.5 }))}
-      />
-      <IconButton
-        label="Ta bort block"
-        icon={Trash2}
-        onClick={() => act(() => remove(b))}
-      />
-    </div>
+    <details className="block-options">
+      <summary
+        aria-label={`${blockNames[d.type]}: fler alternativ`}
+        title="Fler alternativ"
+      >
+        <MoreHorizontal size={19} />
+      </summary>
+      <div className="block-option-list">
+        <Button
+          icon={ArrowUp}
+          disabled={!previous}
+          onClick={() => act(() => save({ order: previous.body.order - 0.5 }))}
+        >
+          Flytta upp
+        </Button>
+        <Button
+          icon={ArrowDown}
+          disabled={!next}
+          onClick={() => act(() => save({ order: next.body.order + 0.5 }))}
+        >
+          Flytta ned
+        </Button>
+        <Button icon={Trash2} onClick={() => act(() => remove(b))}>
+          Ta bort block
+        </Button>
+      </div>
+    </details>
   );
   return (
     <div className={`document-block block-${d.type}`}>

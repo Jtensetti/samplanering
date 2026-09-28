@@ -49,3 +49,11 @@
 **Kritisk slutsats:** bredden är stor för en prototyp. Nästa prioritet bör vara observerade användartester och förenkling, inte fler funktioner. Att alla verktyg använder samma kort minskar dubbelarbete, men enkelheten är ännu inte verifierad med nya användare. Funktionerna är grundversioner: whiteboard är en idétavla, beroenden är kopplingar och belastning är en summering av uppskattningar. E-post/SSO, anonym formulärpublicering, integrationsmotor, avancerad Gantt och teckenvis samskrivning återstår. Offlinearbete och större datamängder är inte verifierade; klienten hämtar teamets aktuella poster vid förändring.
 
 **Driftgräns:** Docker/Caddy är förberett med beständig volym och HTTPS-konfiguration. Docker saknades i den lokala arbetsmiljön, så containerkontrollen ligger i GitHub Actions. Ingen publik instans har driftsatts. Instruktioner för start, gemensam testadress och säkerhetskopiering finns i DRIFT.md.
+
+## Frontend efter Classroom-studien
+
+Startsidan prioriterar nu personens nästa uppgifter. Planen skiljer arbete från planverktyg, och öppnade uppgifter ger dokumentet huvudutrymmet. Ansvariga och datum är samlade i sidospalten och infällbara på mobil. Mina uppgifter skiljer öppna, försenade och klara uppgifter. Planens namn redigeras i Anpassa plan. Text i befintliga block sparas efter en kort paus.
+
+Granskningen hittade två problem att rätta: ett första osparat utkast kunde döljas när en kollega lade till ett block, och globala felmeddelanden kunde hamna bakom en öppen dialog. Utkastet bevaras nu vid serveruppdateringar och aktiv dialog visar fel och Ångra. Båda flödena ingår i det nya webbläsartestet. En pilikon ersatte även ett plustecken som inte visades korrekt i testwebbläsarens mobilläge.
+
+Fem Playwright-testfall passerar lokalt, inklusive sparande utan att lämna fältet, konfliktval, fortsatt skrivning under långsam sparning, tangentbordsnavigation mellan flikar, mobil datumredigering, felåterkoppling och bevarat första utkast vid samtidig ändring. Desktop- och mobilbilder har granskats. Principer, primärkällor och återstående användbarhetsfrågor finns i CLASSROOM.md.

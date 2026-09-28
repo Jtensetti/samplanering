@@ -17,9 +17,9 @@ test("create a team, plan, task and working document", async ({ page }) => {
   await page.getByRole("button", { name: "Skapa er första plan" }).click();
   await page.getByLabel("Vad heter planen?").fill("Införa bokningssystem");
   await page.getByRole("button", { name: "Skapa", exact: true }).click();
-  await expect(page.getByLabel("Planens namn")).toHaveValue(
-    "Införa bokningssystem",
-  );
+  await expect(
+    page.getByRole("heading", { name: "Införa bokningssystem", exact: true }),
+  ).toBeVisible();
   await page
     .getByRole("button", { name: "Lägg till uppgift", exact: true })
     .first()
@@ -28,11 +28,15 @@ test("create a team, plan, task and working document", async ({ page }) => {
   await page.getByRole("button", { name: "Skapa", exact: true }).click();
   const sheet = page.getByRole("dialog", { name: "Uppgift", exact: true });
   await expect(sheet).toBeVisible();
-  await sheet.getByRole("button", { name: "Lägg till innehåll" }).click();
-  await sheet.getByRole("button", { name: "Text", exact: true }).click();
   await sheet
-    .getByLabel("Text", { exact: true })
+    .getByLabel("Börja skriva i dokumentet", { exact: true })
     .fill("Testa bokning och dokumentera resultatet.");
+  await sheet
+    .getByRole("button", { name: "Lägg till text", exact: true })
+    .click();
+  await expect(sheet.getByLabel("Text", { exact: true })).toHaveValue(
+    "Testa bokning och dokumentera resultatet.",
+  );
   await sheet.getByRole("heading", { name: "Arbetsdokument" }).click();
   await expect(sheet.getByText("Sparar…")).toHaveCount(0);
   await sheet.getByRole("button", { name: "Stäng", exact: true }).click();
