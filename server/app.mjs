@@ -6,6 +6,7 @@ import { promisify } from 'node:util';
 import { mkdirSync,writeFileSync,unlinkSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { openDatabase } from './db.mjs';
+import { presets } from '../shared/presets.mjs';
 import { schemas,parentKinds,credentials } from './schema.mjs';
 const scrypt=promisify(rawScrypt), uid=()=>randomUUID(), now=()=>new Date().toISOString(), digest=s=>createHash('sha256').update(s).digest('hex');
 const fail=(status,message)=>{throw Object.assign(new Error(message),{status})};
@@ -29,6 +30,8 @@ export function createApp({dataDir=process.env.DATA_DIR||'./data',origin=process
     if(expected&&(!p||p.team_id!==team||!expected.includes(p.kind)||p.body.archived)||!expected&&parent)fail(400,'Innehållet ligger på fel plats.');
     const ref=(id,kinds,parentId)=>{const r=record(id);if(!r||r.team_id!==team||!kinds.includes(r.kind)||(parentId&&r.parent_id!==parentId))fail(400,'En koppling är ogiltig.');return r};
     const member=id=>{if(!one('SELECT 1 FROM members WHERE team_id=? AND user_id=?',team,id))fail(400,'Personen ingår inte i teamet.');};
+    if(kind==='plan'&&body.defaultTemplateId)ref(body.defaultTemplateId,['template']);
+    if(kind==='bucket'&&body.archived&&sql("SELECT body FROM records WHERE parent_id=? AND kind='card' AND deleted IS NULL",parent).some(r=>{const d=JSON.parse(r.body);return d.bucketId===self&&!d.archived}))fail(400,'Flytta uppgifterna innan du arkiverar kolumnen.');
     if(kind==='card') {
       ref(body.bucketId,['bucket'],parent);body.assignees.forEach(member);
       if(body.sprintId)ref(body.sprintId,['sprint'],parent);
@@ -72,11 +75,28 @@ export function createApp({dataDir=process.env.DATA_DIR||'./data',origin=process
   app.delete('/api/teams/:team/members/:user',(req,res)=>{role(req.params.team,req.user.id,true,true);const m=one('SELECT role FROM members WHERE team_id=? AND user_id=?',req.params.team,req.params.user);if(m?.role==='owner')fail(400,'Teamets ägare kan inte tas bort.');run('DELETE FROM members WHERE team_id=? AND user_id=?',req.params.team,req.params.user);publish(req.params.team);res.json({ok:true})});
   app.get('/api/state',(req,res)=>{const team=String(req.query.team||'');const access=role(team,req.user.id);res.json({team:one('SELECT * FROM teams WHERE id=?',team),role:access,members:sql('SELECT u.id,u.name,m.role FROM members m JOIN users u ON u.id=m.user_id WHERE m.team_id=?',team),records:sql('SELECT * FROM records WHERE team_id=? AND deleted IS NULL ORDER BY updated_at',team).map(decode),notifications:sql('SELECT * FROM notifications WHERE team_id=? AND user_id=? ORDER BY at DESC LIMIT 100',team,req.user.id),timer:one('SELECT * FROM timers WHERE user_id=?',req.user.id)||null})});
   app.get('/api/events',(req,res)=>{const team=String(req.query.team||'');role(team,req.user.id);res.set({'Content-Type':'text/event-stream','Cache-Control':'no-cache','Connection':'keep-alive','X-Accel-Buffering':'no'});res.flushHeaders();res.write('event: ready\ndata: {}\n\n');const c={team,res};clients.add(c);const interval=setInterval(()=>{if(!one('SELECT 1 FROM sessions s JOIN members m ON m.user_id=s.user_id WHERE s.hash=? AND s.expires>? AND m.team_id=?',req.user.hash,Date.now(),team)){res.end();return}res.write(': keepalive\n\n')},15000);req.on('close',()=>{clearInterval(interval);clients.delete(c)})});
-  app.post('/api/records',(req,res)=>{const {teamId,kind,parentId=null,body}=req.body;role(teamId,req.user.id,true);const r=transaction(()=>{const r=insert(teamId,kind,parentId,body,req.user.id);if(kind==='plan')for(const [order,title]of ['Att göra','Pågår','Klart'].entries())insert(teamId,'bucket',r.id,{title,order,done:order===2},req.user.id);changes(r,null,req.user.id);return r});publish(teamId);res.status(201).json(r)});
+  app.post('/api/records',(req,res)=>{const {teamId,kind,parentId=null,body}=req.body;role(teamId,req.user.id,true);const r=transaction(()=>{const r=insert(teamId,kind,parentId,body,req.user.id);if(kind==='plan')for(const [order,title]of ['Att göra','Pågår','Klart'].entries())insert(teamId,'bucket',r.id,{title,order,done:order===2},req.user.id);if(kind==='card'){const p=record(parentId);if(p.body.defaultTemplateId){const t=record(p.body.defaultTemplateId);t?.body.blocks.forEach((b,i)=>insert(teamId,'block',r.id,{...b,order:i},req.user.id))}}changes(r,null,req.user.id);return r});publish(teamId);res.status(201).json(r)});
   app.patch('/api/records/:id',(req,res)=>{const r=requireRecord(req.params.id,req.user.id,true);version(req,r);if(['comment','message','time'].includes(r.kind)&&r.created_by!==req.user.id)fail(403,'Du kan bara ändra dina egna inlägg.');const next=transaction(()=>{let next=update(r,{...r.body,...req.body},req.user.id);changes(next,r,req.user.id);if(next.kind==='card'&&next.body.bucketId!==r.body.bucketId)next=automate(next,req.user.id);if(next.kind==='card'&&next.body.done&&!r.body.done)recur(next,req.user.id);return next});publish(r.team_id);res.json(next)});
   app.delete('/api/records/:id',(req,res)=>{const r=requireRecord(req.params.id,req.user.id,true);version(req,r);if(!['block','comment','message','sticky','view','rule','time','goal'].includes(r.kind))fail(400,'Arkivera innehållet i stället.');if(['comment','message','time'].includes(r.kind)&&r.created_by!==req.user.id)fail(403,'Du kan bara ta bort dina egna inlägg.');run('UPDATE records SET deleted=?,version=version+1 WHERE id=?',now(),r.id);event(r,req.user.id,'deleted');publish(r.team_id);res.json({id:r.id,version:r.version+1})});
   app.post('/api/records/:id/restore',(req,res)=>{const r=decode(one('SELECT * FROM records WHERE id=?',req.params.id));if(!r||!r.deleted)fail(404,'Innehållet hittades inte.');role(r.team_id,req.user.id,true);version(req,r);if(['comment','message','time'].includes(r.kind)&&r.created_by!==req.user.id)fail(403,'Du kan bara återställa dina egna inlägg.');validate(r.kind,r.body,r.team_id,r.parent_id,r.id);run('UPDATE records SET deleted=NULL,version=version+1 WHERE id=?',r.id);event(r,req.user.id,'restored');publish(r.team_id);res.json(record(r.id))});
-  app.get('/api/records/:id/history',(req,res)=>{const r=requireRecord(req.params.id,req.user.id);res.json(sql('SELECT e.*,u.name FROM events e JOIN users u ON u.id=e.user_id WHERE e.record_id=? ORDER BY e.id DESC LIMIT 100',r.id).map(e=>({...e,body:JSON.parse(e.body)})))});
+  app.get('/api/records/:id/history',(req,res)=>{const r=requireRecord(req.params.id,req.user.id);res.json(sql('SELECT e.*,u.name FROM events e JOIN users u ON u.id=e.user_id WHERE e.record_id=? OR e.record_id IN (SELECT id FROM records WHERE parent_id=?) ORDER BY e.id DESC LIMIT 150',r.id,r.id).map(e=>({...e,body:JSON.parse(e.body)})))});
+  app.post('/api/plans/preset',(req,res)=>{
+    const {teamId,preset,title}=req.body;role(teamId,req.user.id,true);
+    const spec=Object.hasOwn(presets,preset)?presets[preset]:null;if(!spec)fail(400,'Mallen finns inte.');
+    const p=transaction(()=>{
+      let template=null;
+      if(spec.blocks.length){
+        const blocks=spec.blocks.map((b,i)=>{
+          const {items,...other}=b;
+          return schemas.block.parse({...other,order:i,checked:(items||[]).map(text=>({id:uid(),text,done:false}))});
+        });
+        template=insert(teamId,'template',null,{title:spec.name,blocks},req.user.id);
+      }
+      const p=insert(teamId,'plan',null,{title,defaultTemplateId:template?.id||'',fields:spec.fields.map(([label,type,options=[]])=>({id:uid(),label,type,options}))},req.user.id);
+      spec.buckets.forEach((title,order)=>insert(teamId,'bucket',p.id,{title,order,done:order===spec.buckets.length-1},req.user.id));
+      return p;
+    });publish(teamId);res.status(201).json(p);
+  });
   app.post('/api/notifications/read',(req,res)=>{role(req.body.teamId,req.user.id);run('UPDATE notifications SET read=1 WHERE user_id=? AND team_id=?',req.user.id,req.body.teamId);res.json({ok:true})});
   app.post('/api/records/:id/template',(req,res)=>{const r=requireRecord(req.params.id,req.user.id,true),t=requireRecord(req.body.templateId,req.user.id);if(!['card','doc'].includes(r.kind)||t.kind!=='template'||t.team_id!==r.team_id)fail(400,'Mallen kan inte användas här.');transaction(()=>{const max=Math.max(0,...sql('SELECT body FROM records WHERE parent_id=? AND kind=? AND deleted IS NULL',r.id,'block').map(x=>JSON.parse(x.body).order));t.body.blocks.forEach((b,i)=>insert(r.team_id,'block',r.id,{...b,order:max+i+1},req.user.id))});publish(r.team_id);res.json({ok:true})});
   const uploadDir=resolve(dataDir,'files');mkdirSync(uploadDir,{recursive:true});
