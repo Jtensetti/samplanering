@@ -1,0 +1,24 @@
+import { DatabaseSync } from 'node:sqlite';
+import { mkdirSync } from 'node:fs';
+import { resolve } from 'node:path';
+export function openDatabase(dir) {
+  mkdirSync(dir,{recursive:true});
+  const db=new DatabaseSync(resolve(dir,'samplanering.sqlite'));
+  db.exec(`PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON; PRAGMA busy_timeout=5000;
+    CREATE TABLE IF NOT EXISTS users(id TEXT PRIMARY KEY,email TEXT NOT NULL UNIQUE,name TEXT NOT NULL,password TEXT NOT NULL);
+    CREATE TABLE IF NOT EXISTS sessions(hash TEXT PRIMARY KEY,user_id TEXT NOT NULL REFERENCES users(id),expires INTEGER NOT NULL);
+    CREATE TABLE IF NOT EXISTS teams(id TEXT PRIMARY KEY,name TEXT NOT NULL);
+    CREATE TABLE IF NOT EXISTS members(team_id TEXT NOT NULL REFERENCES teams(id),user_id TEXT NOT NULL REFERENCES users(id),role TEXT NOT NULL CHECK(role IN ('owner','editor','viewer')),PRIMARY KEY(team_id,user_id));
+    CREATE TABLE IF NOT EXISTS invites(hash TEXT PRIMARY KEY,team_id TEXT NOT NULL REFERENCES teams(id),role TEXT NOT NULL,expires INTEGER NOT NULL,used INTEGER NOT NULL DEFAULT 0);
+    CREATE TABLE IF NOT EXISTS records(id TEXT PRIMARY KEY,team_id TEXT NOT NULL REFERENCES teams(id),kind TEXT NOT NULL,parent_id TEXT REFERENCES records(id),body TEXT NOT NULL,version INTEGER NOT NULL DEFAULT 1,created_by TEXT NOT NULL REFERENCES users(id),updated_at TEXT NOT NULL,deleted TEXT);
+    CREATE INDEX IF NOT EXISTS records_team ON records(team_id,kind,deleted);
+    CREATE INDEX IF NOT EXISTS records_parent ON records(parent_id);
+    CREATE TABLE IF NOT EXISTS events(id INTEGER PRIMARY KEY AUTOINCREMENT,team_id TEXT NOT NULL,record_id TEXT NOT NULL,user_id TEXT NOT NULL,action TEXT NOT NULL,body TEXT NOT NULL,at TEXT NOT NULL);
+    CREATE INDEX IF NOT EXISTS events_record ON events(record_id,id);
+    CREATE TABLE IF NOT EXISTS notifications(id TEXT PRIMARY KEY,team_id TEXT NOT NULL,user_id TEXT NOT NULL,record_id TEXT,text TEXT NOT NULL,read INTEGER NOT NULL DEFAULT 0,at TEXT NOT NULL,dedupe TEXT UNIQUE);
+    CREATE TABLE IF NOT EXISTS files(id TEXT PRIMARY KEY,team_id TEXT NOT NULL REFERENCES teams(id),name TEXT NOT NULL,mime TEXT NOT NULL,size INTEGER NOT NULL);
+    CREATE TABLE IF NOT EXISTS timers(user_id TEXT PRIMARY KEY REFERENCES users(id),team_id TEXT NOT NULL,card_id TEXT NOT NULL,started INTEGER NOT NULL);
+    CREATE TABLE IF NOT EXISTS recurrences(source_id TEXT PRIMARY KEY,record_id TEXT NOT NULL);
+    PRAGMA user_version=1;`);
+  return db;
+}

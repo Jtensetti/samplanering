@@ -1,0 +1,43 @@
+{
+  "name": "samplanering",
+  "version": "1.0.0",
+  "description": "Gemensam planering med uppgifter, arbetsdokument och uppföljning",
+  "scripts": {
+    "dev": "node --env-file-if-exists=.env server/index.mjs",
+    "dev:ui": "vite",
+    "build": "vite build",
+    "start": "node --env-file-if-exists=.env server/index.mjs",
+    "test": "node --test tests/*.test.mjs",
+    "test:ui": "playwright test",
+    "check": "node --check server/app.mjs && node --check server/schema.mjs"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Jtensetti/samplanering.git"
+  },
+  "keywords": [],
+  "author": "",
+  "type": "module",
+  "bugs": {
+    "url": "https://github.com/Jtensetti/samplanering/issues"
+  },
+  "homepage": "https://github.com/Jtensetti/samplanering#readme",
+  "dependencies": {
+    "express": "5.2.1",
+    "express-rate-limit": "8.7.0",
+    "helmet": "8.3.0",
+    "lucide-react": "1.48.0",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "zod": "4.6.5"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.63.0",
+    "@vitejs/plugin-react": "6.1.1",
+    "vite": "8.3.1"
+  },
+  "private": true,
+  "engines": {
+    "node": ">=24.0.0 <25"
+  }
+}
