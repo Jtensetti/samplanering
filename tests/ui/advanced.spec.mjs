@@ -36,6 +36,7 @@ test("a rule, whiteboard idea, work period and goal can be created through the i
   await page
     .getByRole("button", { name: "Samarbetsprojekt", exact: true })
     .click();
+  await page.getByRole("tab", { name: "Planverktyg", exact: true }).click();
   await page.getByRole("button", { name: /Automatisera/ }).click();
   await page
     .getByLabel("När en uppgift flyttas till")

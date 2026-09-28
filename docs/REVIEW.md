@@ -49,3 +49,21 @@
 **Kritisk slutsats:** bredden är stor för en prototyp. Nästa prioritet bör vara observerade användartester och förenkling, inte fler funktioner. Att alla verktyg använder samma kort minskar dubbelarbete, men enkelheten är ännu inte verifierad med nya användare. Funktionerna är grundversioner: whiteboard är en idétavla, beroenden är kopplingar och belastning är en summering av uppskattningar. E-post/SSO, anonym formulärpublicering, integrationsmotor, avancerad Gantt och teckenvis samskrivning återstår. Offlinearbete och större datamängder är inte verifierade; klienten hämtar teamets aktuella poster vid förändring.
 
 **Driftgräns:** Docker/Caddy är förberett med beständig volym och HTTPS-konfiguration. Docker saknades i den lokala arbetsmiljön, så containerkontrollen ligger i GitHub Actions. Ingen publik instans har driftsatts. Instruktioner för start, gemensam testadress och säkerhetskopiering finns i DRIFT.md.
+
+## Frontend efter Classroom-studien
+
+Startsidan prioriterar nu personens nästa uppgifter. Planen skiljer arbete från planverktyg, och öppnade uppgifter ger dokumentet huvudutrymmet. Ansvariga och datum är samlade i sidospalten och infällbara på mobil. Mina uppgifter skiljer öppna, försenade och klara uppgifter. Planens namn redigeras i Anpassa plan. Text i befintliga block sparas efter en kort paus.
+
+Granskningen hittade två problem att rätta: ett första osparat utkast kunde döljas när en kollega lade till ett block, och globala felmeddelanden kunde hamna bakom en öppen dialog. Utkastet bevaras nu vid serveruppdateringar och aktiv dialog visar fel och Ångra. Båda flödena ingår i det nya webbläsartestet. En pilikon ersatte även ett plustecken som inte visades korrekt i testwebbläsarens mobilläge.
+
+Fem Playwright-testfall passerar lokalt, inklusive sparande utan att lämna fältet, konfliktval, fortsatt skrivning under långsam sparning, tangentbordsnavigation mellan flikar, mobil datumredigering, felåterkoppling och bevarat första utkast vid samtidig ändring. Desktop- och mobilbilder har granskats. Principer, primärkällor och återstående användbarhetsfrågor finns i CLASSROOM.md.
+
+Den första CI-körningen upptäckte ett intermittent fel i simuleringen av långsamt nätverk. Spårningen visade att avregistrering av testets engångsinterceptor kunde lämna en samtidig tillståndshämtning pausad. Interceptorn ligger nu kvar under testet och fördröjer endast den första sparningen. Samma scenario passerade därefter sex lokala körningar i följd.
+
+## Fältgranskning enligt Apple och Material
+
+90 fält och fälttyper har bedömts i UX-REVIEW.md. Gemensamma regler styr kontrollhöjd, textstorlek, korta värden, datum, växande fritext och färgroller. Överflödig introduktionstext är borttagen, medan behörighet, sparande, formatkrav och konsekvenser behålls. Etiketter pekar på faktiska kontroller, textfel kopplas till fältet och mobilens synliga ordning följer fokusordningen. En överflödig nivå med Fler detaljer är borttagen.
+
+Granskningen hittade att redigering av flervalsalternativ nollställde ett befintligt svar. Alternativ redigeras nu med uttrycklig sparning och svaret behålls om det fortfarande finns i listan. Kommentarer och teamsamtal blockerar dubbelsändning medan ett anrop väntar och behåller text vid fel.
+
+Sex Playwright-testfall passerar lokalt. Det nya testet verifierar bland annat långa texter, validering vid rätt fält, svenska decimaler, bibehållet flervalssvar, misslyckad kommentarsändning och 320 px pekskärm. Visuell kontroll omfattar arbetsyta, mobil, planinställningar och namnfältens/färgvalets inbördes geometri. Beräknad kontrast för systempalettens textpar är minst 5,24:1; inmatningsram mot vitt är 3,68:1. Det är en kontroll av dessa färgpar, inte en full certifiering av hela appen.

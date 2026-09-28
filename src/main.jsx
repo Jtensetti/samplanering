@@ -22,6 +22,7 @@ function Notices() {
   ) : null;
 }
 import "./style.css";
+import "./forms.css";
 class ErrorBoundary extends React.Component {
   state = { error: false };
   static getDerivedStateFromError() {

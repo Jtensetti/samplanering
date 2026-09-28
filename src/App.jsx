@@ -13,16 +13,11 @@ import {
   MessageSquare,
   Archive,
   Check,
-  ArrowLeft,
-  SlidersHorizontal,
   Bell,
   PanelTop,
-  Clock,
   ChartNoAxesCombined,
-  Workflow,
-  StickyNote,
-  Target,
   History,
+  ChevronDown,
 } from "lucide-react";
 import { api, useApp, today } from "./store";
 import {
@@ -46,6 +41,7 @@ import {
   Notifications,
 } from "./views";
 import { Document, Comments } from "./documents";
+import { Home, MyTasks, dueLabel } from "./workspace";
 export default function App() {
   const app = useApp(),
     {
@@ -243,124 +239,46 @@ export default function App() {
             icon={Menu}
             onClick={() => setMobile(true)}
           />
-          <span>{state.team.name}</span>
+          <span className="workspace-location">
+            {state.team.name}
+            {page === "plan" && plan && (
+              <>
+                <span aria-hidden="true"> / </span>
+                <strong>{plan.body.title}</strong>
+              </>
+            )}
+          </span>
           <Button icon={Bell} onClick={() => setNotifications(true)}>
             Notiser
             {state.notifications.some((n) => !n.read)
               ? ` (${state.notifications.filter((n) => !n.read).length})`
               : ""}
           </Button>
-          <span className="connection">
-            {online
-              ? "Gemensam arbetsyta"
-              : "Återansluter… Dina utkast finns kvar."}
-          </span>
-          <Button icon={Plus} onClick={() => setTeamModal(true)}>
-            Nytt team
-          </Button>
+          {!online && (
+            <span className="connection" role="status">
+              Återansluter… Dina utkast finns kvar.
+            </span>
+          )}
         </header>
         <main id="main" tabIndex={-1}>
           {page === "plans" && (
-            <>
-              <div className="page-heading">
-                <div>
-                  <p className="eyebrow">SAMLA ARBETET</p>
-                  <h1>Era planer</h1>
-                  <p>Från första idé till klart, tillsammans.</p>
-                </div>
-                {writable && (
-                  <Button
-                    variant="primary"
-                    icon={Plus}
-                    onClick={() => setNewPlan(true)}
-                  >
-                    Skapa plan
-                  </Button>
-                )}
-              </div>
-              {!plans.length ? (
-                <Empty
-                  title="Vad vill ni göra tillsammans?"
-                  text="Skapa er första plan. Ni kan börja med ett enda kort."
-                >
-                  {writable && (
-                    <Button
-                      variant="primary"
-                      icon={Plus}
-                      onClick={() => setNewPlan(true)}
-                    >
-                      Skapa er första plan
-                    </Button>
-                  )}
-                </Empty>
-              ) : (
-                <div className="plan-grid">
-                  {plans.map((p) => {
-                    const pc = cards.filter((c) => c.parent_id === p.id),
-                      done = pc.filter((c) => c.body.done).length;
-                    return (
-                      <button
-                        className={"plan-tile " + p.body.color}
-                        key={p.id}
-                        onClick={() => go("plan", p.id)}
-                      >
-                        <span className="plan-tile-icon">
-                          <LayoutGrid size={23} />
-                        </span>
-                        <h2>{p.body.title}</h2>
-                        <p>{p.body.description || `${pc.length} uppgifter`}</p>
-                        <div className="plan-progress">
-                          <progress max={pc.length || 1} value={done} />
-                          <span>
-                            {done} av {pc.length} klara
-                          </span>
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-              <div className="actions">
-                <Button icon={Archive} onClick={() => setArchive(true)}>
-                  Öppna arkiv
-                </Button>
-              </div>
-              <div className="section-header">
-                <h2>På tur för dig</h2>
-                <Button onClick={() => go("mine")}>Visa alla</Button>
-              </div>
-              <TaskList
-                cards={cards
-                  .filter(
-                    (c) => !c.body.done && c.body.assignees.includes(user.id),
-                  )
-                  .sort((a, b) =>
-                    (a.body.due || "9999").localeCompare(b.body.due || "9999"),
-                  )
-                  .slice(0, 5)}
-                onOpen={setSelected}
-              />
-            </>
+            <Home
+              onPlan={(id) => go("plan", id)}
+              onOpen={setSelected}
+              onCreate={() => setNewPlan(true)}
+              onMine={() => go("mine")}
+              onArchive={() => setArchive(true)}
+            />
           )}
           {page === "portfolio" && (
             <Portfolio onPlan={(id) => go("plan", id)} onOpen={setSelected} />
           )}{" "}
           {page === "chat" && <Chat />}{" "}
           {page === "mine" && (
-            <>
-              <div className="page-heading">
-                <div>
-                  <p className="eyebrow">DITT ARBETE</p>
-                  <h1>Mina uppgifter</h1>
-                </div>
-              </div>
-              <TaskList
-                cards={cards
-                  .filter((c) => c.body.assignees.includes(user.id))
-                  .sort((a, b) => Number(a.body.done) - Number(b.body.done))}
-                onOpen={setSelected}
-              />
-            </>
+            <MyTasks
+              cards={cards.filter((c) => c.body.assignees.includes(user.id))}
+              onOpen={setSelected}
+            />
           )}
           {page === "plan" && plan && (
             <Plan
@@ -374,7 +292,6 @@ export default function App() {
             <>
               <div className="page-heading">
                 <div>
-                  <p className="eyebrow">GEMENSAM KUNSKAP</p>
                   <h1>Dokument</h1>
                 </div>
                 {writable && (
@@ -466,7 +383,15 @@ export default function App() {
           }}
         />
       )}
-      {invite && <TeamModal onClose={() => setInvite(false)} />}{" "}
+      {invite && (
+        <TeamModal
+          onClose={() => setInvite(false)}
+          onNewTeam={() => {
+            setInvite(false);
+            setTeamModal(true);
+          }}
+        />
+      )}{" "}
       {notifications && (
         <Notifications
           onClose={() => setNotifications(false)}
@@ -487,6 +412,13 @@ export default function App() {
             setTrail((t) => t.slice(0, -1));
           }}
           onOpen={(id) => {
+            if (
+              document.querySelector('dialog[open] [data-dirty="true"]') &&
+              !confirm(
+                "Det finns osparade ändringar. Vill du byta uppgift ändå?",
+              )
+            )
+              return;
             setTrail((t) => [...t, selected]);
             setSelected(id);
           }}
@@ -525,7 +457,6 @@ function Auth() {
           Samplanering
         </div>
         <h1>{register ? "Välkommen till teamet" : "Välkommen tillbaka"}</h1>
-        <p>Planer, uppgifter och dokument. På samma plats.</p>
         <form
           onSubmit={async (e) => {
             e.preventDefault();
@@ -563,6 +494,8 @@ function Auth() {
           <Field label="E-post">
             <input
               type="email"
+              autoCapitalize="none"
+              spellCheck={false}
               autoComplete="email"
               required
               value={email}
@@ -615,7 +548,7 @@ function Welcome() {
     <div className="auth-page">
       <div className="auth-card">
         <h1>Hej {user.name.split(" ")[0]}.</h1>
-        <p>Vad heter teamet du vill planera med?</p>
+        <p>Skapa ett team eller gå med via en inbjudan.</p>
         <form
           onSubmit={(e) => {
             e.preventDefault();
@@ -669,19 +602,23 @@ function JoinTeam() {
           });
         }}
       >
-        <input
-          required
-          aria-label="Inbjudningslänk"
-          placeholder="Klistra in inbjudningslänken"
-          value={token}
-          onChange={(e) => setToken(e.target.value)}
-        />
+        <Field label="Inbjudningslänk">
+          <input
+            required
+            autoCapitalize="none"
+            spellCheck={false}
+            aria-label="Inbjudningslänk"
+            placeholder="Klistra in inbjudningslänken"
+            value={token}
+            onChange={(e) => setToken(e.target.value)}
+          />
+        </Field>
         <Button variant="primary">Gå med i teamet</Button>
       </form>
     </details>
   );
 }
-function TeamModal({ onClose }) {
+function TeamModal({ onClose, onNewTeam }) {
   const { state, teamId, act, reload } = useApp();
   const [role, setRole] = useState("editor"),
     [link, setLink] = useState(""),
@@ -744,12 +681,14 @@ function TeamModal({ onClose }) {
           </Button>
           {link && (
             <div className="invite-result">
-              <input
-                aria-label="Inbjudningslänk"
-                readOnly
-                value={link}
-                onFocus={(e) => e.target.select()}
-              />
+              <Field label="Inbjudningslänk">
+                <input
+                  aria-label="Inbjudningslänk"
+                  readOnly
+                  value={link}
+                  onFocus={(e) => e.target.select()}
+                />
+              </Field>
               <Button
                 onClick={() =>
                   act(async () => {
@@ -760,15 +699,17 @@ function TeamModal({ onClose }) {
               >
                 {copied ? "Kopierad" : "Kopiera länk"}
               </Button>
-              <small>
-                Länken kan användas en gång och gäller i sju dagar. Dela den med
-                personen du vill bjuda in.
-              </small>
+              <small>Gäller en person i sju dagar.</small>
             </div>
           )}
         </>
       )}
       <JoinTeam />
+      <div className="panel-footer">
+        <Button icon={Plus} onClick={onNewTeam}>
+          Skapa nytt team
+        </Button>
+      </div>
     </Modal>
   );
 }
@@ -794,9 +735,16 @@ export function TaskList({ cards, onOpen }) {
             <small>{get(c.parent_id)?.body.title}</small>
           </button>
           <span
-            className={c.body.due < today() && !c.body.done ? "overdue" : ""}
+            className={
+              c.body.due && c.body.due < today() && !c.body.done
+                ? "overdue"
+                : ""
+            }
           >
-            {c.body.due}
+            {c.body.due && c.body.due < today() && !c.body.done
+              ? "Försenad · "
+              : ""}
+            {dueLabel(c.body.due)}
           </span>
           <div className="avatars">
             {c.body.assignees.map((id) => (
@@ -836,13 +784,14 @@ export function TaskCard({ card: c, onOpen }) {
       <div className="card-meta">
         {c.body.due && (
           <span
-            className={c.body.due < today() && !c.body.done ? "overdue" : ""}
+            className={
+              c.body.due && c.body.due < today() && !c.body.done
+                ? "overdue"
+                : ""
+            }
           >
             <CalendarDays size={14} />
-            {new Date(c.body.due + "T12:00:00").toLocaleDateString("sv-SE", {
-              day: "numeric",
-              month: "short",
-            })}
+            {dueLabel(c.body.due)}
           </span>
         )}
         {checks.length > 0 && (
@@ -873,134 +822,216 @@ export function CardPanel({ record: r, onClose, onOpen }) {
   const { state, childrenOf, get, patch, act, writable } = useApp();
   const isCard = r.kind === "card";
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [detailsOpen, setDetailsOpen] = useState(
+    () => window.matchMedia("(min-width: 900px)").matches,
+  );
+  const parent = get(r.parent_id),
+    bucket = get(r.body.bucketId);
   return (
-    <Modal title={isCard ? "Uppgift" : "Dokument"} sheet wide onClose={onClose}>
+    <Modal
+      title={isCard ? "Uppgift" : "Dokument"}
+      heading={isCard ? parent?.body.title : "Gemensamt dokument"}
+      sheet
+      wide
+      className="task-workspace"
+      onClose={onClose}
+    >
       <div className="card-panel">
-        <DraftText
-          className="detail-title"
-          label="Titel"
-          value={r.body.title}
-          version={r.version}
-          disabled={!writable}
-          onSave={(v, version) => patch(r, { title: v }, version)}
-        />
-        {isCard && (
-          <>
-            <div className="detail-meta">
-              <Field label="Kolumn">
+        <div className="task-heading">
+          <DraftText
+            className="detail-title"
+            multiline
+            rows={1}
+            maxLength={200}
+            label="Titel"
+            value={r.body.title}
+            version={r.version}
+            disabled={!writable}
+            onSave={(v, version) => patch(r, { title: v }, version)}
+          />
+          <div className="task-context">
+            {isCard && (
+              <>
+                <span className={`task-status ${r.body.done ? "is-done" : ""}`}>
+                  {r.body.done ? "Klar" : bucket?.body.title || "Öppen"}
+                </span>
+                <span>
+                  {r.body.due
+                    ? `Klart ${dueLabel(r.body.due).toLowerCase()}`
+                    : "Inget slutdatum"}
+                </span>
+              </>
+            )}
+            <span>
+              {writable
+                ? childrenOf(r.id, "block").length
+                  ? "Text sparas automatiskt"
+                  : ""
+                : "Du har läsbehörighet"}
+            </span>
+          </div>
+        </div>
+        <div className="task-layout">
+          <aside
+            className="task-details task-controls"
+            aria-label={isCard ? "Om uppgiften" : "Om dokumentet"}
+          >
+            {isCard && (
+              <>
+                <div className="completion-card">
+                  {writable && (
+                    <Button
+                      icon={Check}
+                      variant={r.body.done ? "" : "primary"}
+                      onClick={() =>
+                        act(() => patch(r, { done: !r.body.done }))
+                      }
+                    >
+                      {r.body.done ? "Öppna igen" : "Markera som klar"}
+                    </Button>
+                  )}
+                </div>
+                <details
+                  className="disclosure assignment-details"
+                  open={detailsOpen}
+                  onToggle={(e) => setDetailsOpen(e.currentTarget.open)}
+                >
+                  <summary>
+                    Ansvariga och datum
+                    <ChevronDown size={16} aria-hidden="true" />
+                  </summary>
+                  <div>
+                    <Field label="Kolumn">
+                      <select
+                        disabled={!writable}
+                        value={r.body.bucketId}
+                        onChange={(e) => {
+                          const b = get(e.target.value);
+                          act(() =>
+                            patch(r, { bucketId: b.id, done: b.body.done }),
+                          );
+                        }}
+                      >
+                        {childrenOf(r.parent_id, "bucket").map((b) => (
+                          <option key={b.id} value={b.id}>
+                            {b.body.title}
+                          </option>
+                        ))}
+                      </select>
+                    </Field>
+                    <fieldset className="assignees">
+                      <legend>Ansvariga</legend>
+                      {state.members.map((m) => (
+                        <label key={m.id}>
+                          <input
+                            type="checkbox"
+                            disabled={!writable}
+                            checked={r.body.assignees.includes(m.id)}
+                            onChange={(e) =>
+                              act(() =>
+                                patch(r, {
+                                  assignees: e.target.checked
+                                    ? [...r.body.assignees, m.id]
+                                    : r.body.assignees.filter(
+                                        (id) => id !== m.id,
+                                      ),
+                                }),
+                              )
+                            }
+                          />
+                          <Avatar name={m.name} />
+                          {m.name}
+                        </label>
+                      ))}
+                    </fieldset>
+                    <Field label="Startdatum" width="date">
+                      <input
+                        type="date"
+                        max={r.body.due || undefined}
+                        disabled={!writable}
+                        value={r.body.start}
+                        onChange={(e) =>
+                          act(() => patch(r, { start: e.target.value }))
+                        }
+                      />
+                    </Field>
+                    <Field label="Slutdatum" width="date">
+                      <input
+                        type="date"
+                        disabled={!writable}
+                        min={r.body.start || undefined}
+                        value={r.body.due}
+                        onChange={(e) =>
+                          act(() => patch(r, { due: e.target.value }))
+                        }
+                      />
+                    </Field>
+                  </div>
+                </details>
+              </>
+            )}
+            {!isCard && (
+              <Field label="Sorts dokument">
                 <select
                   disabled={!writable}
-                  value={r.body.bucketId}
-                  onChange={(e) => {
-                    const bucket = get(e.target.value);
-                    act(() =>
-                      patch(r, { bucketId: bucket.id, done: bucket.body.done }),
-                    );
-                  }}
-                >
-                  {childrenOf(r.parent_id, "bucket").map((b) => (
-                    <option key={b.id} value={b.id}>
-                      {b.body.title}
-                    </option>
-                  ))}
-                </select>
-              </Field>
-              <Field label="Status">
-                <select
-                  value={r.body.done ? "done" : "open"}
-                  disabled={!writable}
+                  value={r.body.category}
                   onChange={(e) =>
-                    act(() => patch(r, { done: e.target.value === "done" }))
+                    act(() => patch(r, { category: e.target.value }))
                   }
                 >
-                  <option value="open">Öppen</option>
-                  <option value="done">Klar</option>
+                  <option value="document">Dokument</option>
+                  <option value="wiki">Kunskapsartikel</option>
+                  <option value="journal">Arbetslogg</option>
                 </select>
               </Field>
-              <Field label="Startdatum">
-                <input
-                  type="date"
-                  value={r.body.start}
-                  disabled={!writable}
-                  onChange={(e) =>
-                    act(() => patch(r, { start: e.target.value }))
-                  }
-                />
-              </Field>
-              <Field label="Slutdatum">
-                <input
-                  type="date"
-                  min={r.body.start || undefined}
-                  value={r.body.due}
-                  disabled={!writable}
-                  onChange={(e) => act(() => patch(r, { due: e.target.value }))}
-                />
-              </Field>
-            </div>
-            <fieldset className="assignees">
-              <legend>Ansvariga</legend>
-              {state.members.map((m) => (
-                <label key={m.id}>
-                  <input
-                    type="checkbox"
-                    disabled={!writable}
-                    checked={r.body.assignees.includes(m.id)}
-                    onChange={(e) =>
-                      act(() =>
-                        patch(r, {
-                          assignees: e.target.checked
-                            ? [...r.body.assignees, m.id]
-                            : r.body.assignees.filter((id) => id !== m.id),
-                        }),
-                      )
+            )}
+          </aside>
+          <div className="task-main">
+            <Document record={r} />
+            <Comments record={r} />
+            {isCard && (
+              <Disclosure title="Deluppgifter, kopplingar och tid">
+                <CardAdvanced record={r} onOpen={onOpen} />
+              </Disclosure>
+            )}
+          </div>
+          <aside
+            className="task-details task-extra"
+            aria-label="Fler uppgiftsinställningar"
+          >
+            {isCard && (
+              <>
+                {parent?.body.fields.some((f) => !f.hidden) && (
+                  <Disclosure title="Planens egna fält" open>
+                    <CustomFields record={r} />
+                  </Disclosure>
+                )}
+              </>
+            )}
+            <div className="task-secondary">
+              <Button icon={History} onClick={() => setHistoryOpen(true)}>
+                Ändringshistorik
+              </Button>
+              {writable && (
+                <Disclosure title="Fler alternativ">
+                  <Button
+                    icon={Archive}
+                    onClick={() =>
+                      act(async () => {
+                        await patch(r, { archived: true });
+                        onClose();
+                      })
                     }
-                  />
-                  <Avatar name={m.name} />
-                  {m.name}
-                </label>
-              ))}
-            </fieldset>
-          </>
-        )}
-        <>{isCard && <CustomFields record={r} />}</>
-        {!isCard && (
-          <Field label="Sorts dokument">
-            <select
-              disabled={!writable}
-              value={r.body.category}
-              onChange={(e) =>
-                act(() => patch(r, { category: e.target.value }))
-              }
-            >
-              <option value="document">Dokument</option>
-              <option value="wiki">Kunskapsartikel</option>
-              <option value="journal">Arbetslogg</option>
-            </select>
-          </Field>
-        )}
-        <Document record={r} />
-        <Comments record={r} />
-        {isCard && <CardAdvanced record={r} onOpen={onOpen} />}
-        <Button icon={History} onClick={() => setHistoryOpen(true)}>
-          Visa ändringshistorik
-        </Button>
+                  >
+                    Arkivera {isCard ? "uppgift" : "dokument"}
+                  </Button>
+                </Disclosure>
+              )}
+            </div>
+          </aside>
+        </div>
         {historyOpen && (
           <HistoryView record={r} onClose={() => setHistoryOpen(false)} />
-        )}
-        {writable && (
-          <div className="panel-footer">
-            <Button
-              icon={Archive}
-              onClick={() =>
-                act(async () => {
-                  await patch(r, { archived: true });
-                  onClose();
-                })
-              }
-            >
-              Arkivera {isCard ? "uppgift" : "dokument"}
-            </Button>
-          </div>
         )}
       </div>
     </Modal>

@@ -157,16 +157,18 @@ test("two browsers keep drafts when another editor changes the same block", asyn
   const requestSeen = new Promise((resolve) => {
     received = resolve;
   });
-  await page.route(
-    "**/api/records/" + b.id,
-    async (route) => {
-      const response = await route.fetch();
-      received();
-      await gate;
-      await route.fulfill({ response });
-    },
-    { times: 1 },
-  );
+  let delayNextSave = true;
+  // Keep interception installed while the app refreshes after saving. Removing
+  // a one-shot route during fulfillment can strand a concurrent state request.
+  await page.route("**/api/records/" + b.id, async (route) => {
+    if (!delayNextSave || route.request().method() !== "PATCH")
+      return route.continue();
+    delayNextSave = false;
+    const response = await route.fetch();
+    received();
+    await gate;
+    await route.fulfill({ response });
+  });
   const text = page.getByLabel("Text", { exact: true });
   await text.fill("Första sparningen");
   await page.getByRole("heading", { name: "Arbetsdokument" }).click();

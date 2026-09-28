@@ -41,6 +41,8 @@ Se [drift och gemensam testadress](docs/DRIFT.md) för lokalt nätverk eller HTT
 
 [Funktionsöversikt och gränser](docs/FUNKTIONER.md) beskriver vad varje del gör. [Granskningen efter varje etapp](docs/REVIEW.md) redovisar tester, rättningar och kvarstående begränsningar.
 
+[Designbesluten från Classroom-studien](docs/CLASSROOM.md) beskriver den förenklade startsidan, arbetsytan och det automatiska sparandet, med källor och kritisk granskning.
+
 ## Viktiga gränser i prototypen
 
 Ändringar syns hos andra användare via serverhändelser. Olika dokumentblock kan redigeras parallellt. Om två personer ändrar **samma block** behålls utkastet och användaren får välja version. Det är inte teckenvis samskrivning som i Google Docs.
@@ -71,3 +73,5 @@ Testerna använder egna databaser och konton. `tests/*.test.mjs` verifierar blan
 ## Struktur
 
 `src/` innehåller React-gränssnittet. `server/` innehåller Express-API, validering, SQLite-lagring och schemaläggning. `shared/presets.mjs` innehåller planmallarna. Versioner kontrolleras med `If-Match`; behörighet och teamkopplingar kontrolleras på servern. Sessionskakor är HttpOnly, och i produktion även Secure. Databas, uppladdningar, lösenord och sessionsdata ska inte checkas in i Git.
+
+[Fältgranskning och designregler](docs/UX-REVIEW.md) dokumenterar varje fälttyp, storlekar, färgroller, copy och användarflöden utifrån Apples och Googles riktlinjer.
