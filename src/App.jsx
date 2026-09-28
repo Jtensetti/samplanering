@@ -1,0 +1,1008 @@
+import React, { useEffect, useState } from "react";
+import {
+  LayoutGrid,
+  CheckSquare,
+  BookOpen,
+  Users,
+  Plus,
+  Search,
+  LogOut,
+  Menu,
+  X,
+  CalendarDays,
+  MessageSquare,
+  Archive,
+  Check,
+  ArrowLeft,
+  SlidersHorizontal,
+  Bell,
+  PanelTop,
+  Clock,
+  ChartNoAxesCombined,
+  Workflow,
+  StickyNote,
+  Target,
+  History,
+} from "lucide-react";
+import { api, useApp, today } from "./store";
+import {
+  Button,
+  IconButton,
+  Modal,
+  Field,
+  Empty,
+  Avatar,
+  NewName,
+  DraftText,
+  Disclosure,
+} from "./ui";
+import { CardAdvanced, Portfolio, Chat } from "./advanced";
+import {
+  Plan,
+  CreatePlan,
+  CustomFields,
+  HistoryView,
+  ArchiveView,
+  Notifications,
+} from "./views";
+import { Document, Comments } from "./documents";
+export default function App() {
+  const app = useApp(),
+    {
+      user,
+      ready,
+      setUser,
+      teams,
+      teamId,
+      setTeamId,
+      state,
+      all,
+      get,
+      childrenOf,
+      create,
+      patch,
+      act,
+      refreshTeams,
+      notice,
+      setNotice,
+      online,
+      writable,
+    } = app;
+  const [page, setPage] = useState("plans"),
+    [planId, setPlan] = useState(""),
+    [selected, setSelected] = useState(""),
+    [trail, setTrail] = useState([]),
+    [newPlan, setNewPlan] = useState(false),
+    [invite, setInvite] = useState(false),
+    [teamModal, setTeamModal] = useState(false),
+    [mobile, setMobile] = useState(false),
+    [newDoc, setNewDoc] = useState(false),
+    [query, setQuery] = useState(""),
+    [notifications, setNotifications] = useState(false),
+    [archive, setArchive] = useState(false);
+  useEffect(() => {
+    setPlan("");
+    setSelected("");
+    setTrail([]);
+    setPage("plans");
+  }, [teamId]);
+  useEffect(() => {
+    if (
+      user &&
+      teams.length &&
+      new URLSearchParams(location.search).get("invite")
+    )
+      setInvite(true);
+  }, [user, teams.length]);
+  const go = (p, id = "") => {
+    setPage(p);
+    setPlan(id);
+    setMobile(false);
+    setQuery("");
+    setTrail([]);
+  };
+  if (!ready) return <div className="loading">Öppnar Samplanering…</div>;
+  if (!user) return <Auth />;
+  if (!teams.length) return <Welcome />;
+  if (!state)
+    return (
+      <div className="loading">
+        {online ? "Öppnar teamet…" : "Kunde inte ansluta."}
+        <Button onClick={() => act(app.reload)}>Försök igen</Button>
+      </div>
+    );
+  const plan = get(planId),
+    selection = get(selected),
+    plans = all("plan"),
+    cards = all("card").filter(
+      (c) => get(c.parent_id) && !get(c.parent_id).body.archived,
+    );
+  return (
+    <div className="app">
+      <a className="skip-link" href="#main">
+        Hoppa till innehåll
+      </a>
+      <aside className={`sidebar ${mobile ? "mobile-open" : ""}`}>
+        <div className="brand">
+          <span className="brand-symbol">
+            <PanelTop size={22} />
+          </span>
+          Samplanering
+          <IconButton
+            label="Stäng meny"
+            icon={X}
+            onClick={() => setMobile(false)}
+          />
+        </div>
+        <label className="team-switch">
+          <span className="visually-hidden">Välj team</span>
+          <select value={teamId} onChange={(e) => setTeamId(e.target.value)}>
+            {teams.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <nav aria-label="Huvudmeny">
+          <Nav
+            icon={LayoutGrid}
+            active={page === "plans"}
+            onClick={() => go("plans")}
+          >
+            Planer
+          </Nav>
+          <Nav
+            icon={CheckSquare}
+            active={page === "mine"}
+            onClick={() => go("mine")}
+          >
+            Mina uppgifter
+          </Nav>
+          <Nav
+            icon={ChartNoAxesCombined}
+            active={page === "portfolio"}
+            onClick={() => go("portfolio")}
+          >
+            Överblick
+          </Nav>
+          <Nav
+            icon={MessageSquare}
+            active={page === "chat"}
+            onClick={() => go("chat")}
+          >
+            Teamsamtal
+          </Nav>
+          <Nav
+            icon={BookOpen}
+            active={page === "docs"}
+            onClick={() => go("docs")}
+          >
+            Dokument
+          </Nav>
+        </nav>
+        <div className="side-caption">DINA PLANER</div>
+        <nav aria-label="Planer">
+          {plans.map((p) => (
+            <button
+              key={p.id}
+              className={`plan-nav ${planId === p.id ? "active" : ""}`}
+              onClick={() => go("plan", p.id)}
+            >
+              <span className={"plan-dot " + p.body.color} />
+              <span>{p.body.title}</span>
+            </button>
+          ))}
+        </nav>
+        {writable && (
+          <button className="subtle-add" onClick={() => setNewPlan(true)}>
+            <Plus size={16} />
+            Ny plan
+          </button>
+        )}
+        <div className="sidebar-bottom">
+          <Button icon={Users} onClick={() => setInvite(true)}>
+            Team och delning
+          </Button>
+          <div className="account">
+            <Avatar name={user.name} />
+            <div>
+              <strong>{user.name}</strong>
+              <small>
+                {state.role === "owner"
+                  ? "Teamägare"
+                  : state.role === "viewer"
+                    ? "Läsbehörighet"
+                    : "Medlem"}
+              </small>
+            </div>
+            <IconButton
+              label="Logga ut"
+              icon={LogOut}
+              onClick={() =>
+                act(async () => {
+                  await api("/logout", { method: "POST" });
+                  setUser(null);
+                })
+              }
+            />
+          </div>
+        </div>
+      </aside>
+      {mobile && (
+        <button
+          className="nav-backdrop"
+          aria-label="Stäng navigering"
+          onClick={() => setMobile(false)}
+        />
+      )}
+      <div className="workspace">
+        <header className="topbar">
+          <IconButton
+            label="Öppna meny"
+            icon={Menu}
+            onClick={() => setMobile(true)}
+          />
+          <span>{state.team.name}</span>
+          <Button icon={Bell} onClick={() => setNotifications(true)}>
+            Notiser
+            {state.notifications.some((n) => !n.read)
+              ? ` (${state.notifications.filter((n) => !n.read).length})`
+              : ""}
+          </Button>
+          <span className="connection">
+            {online
+              ? "Gemensam arbetsyta"
+              : "Återansluter… Dina utkast finns kvar."}
+          </span>
+          <Button icon={Plus} onClick={() => setTeamModal(true)}>
+            Nytt team
+          </Button>
+        </header>
+        <main id="main" tabIndex={-1}>
+          {page === "plans" && (
+            <>
+              <div className="page-heading">
+                <div>
+                  <p className="eyebrow">SAMLA ARBETET</p>
+                  <h1>Era planer</h1>
+                  <p>Från första idé till klart, tillsammans.</p>
+                </div>
+                {writable && (
+                  <Button
+                    variant="primary"
+                    icon={Plus}
+                    onClick={() => setNewPlan(true)}
+                  >
+                    Skapa plan
+                  </Button>
+                )}
+              </div>
+              {!plans.length ? (
+                <Empty
+                  title="Vad vill ni göra tillsammans?"
+                  text="Skapa er första plan. Ni kan börja med ett enda kort."
+                >
+                  {writable && (
+                    <Button
+                      variant="primary"
+                      icon={Plus}
+                      onClick={() => setNewPlan(true)}
+                    >
+                      Skapa er första plan
+                    </Button>
+                  )}
+                </Empty>
+              ) : (
+                <div className="plan-grid">
+                  {plans.map((p) => {
+                    const pc = cards.filter((c) => c.parent_id === p.id),
+                      done = pc.filter((c) => c.body.done).length;
+                    return (
+                      <button
+                        className={"plan-tile " + p.body.color}
+                        key={p.id}
+                        onClick={() => go("plan", p.id)}
+                      >
+                        <span className="plan-tile-icon">
+                          <LayoutGrid size={23} />
+                        </span>
+                        <h2>{p.body.title}</h2>
+                        <p>{p.body.description || `${pc.length} uppgifter`}</p>
+                        <div className="plan-progress">
+                          <progress max={pc.length || 1} value={done} />
+                          <span>
+                            {done} av {pc.length} klara
+                          </span>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+              <div className="actions">
+                <Button icon={Archive} onClick={() => setArchive(true)}>
+                  Öppna arkiv
+                </Button>
+              </div>
+              <div className="section-header">
+                <h2>På tur för dig</h2>
+                <Button onClick={() => go("mine")}>Visa alla</Button>
+              </div>
+              <TaskList
+                cards={cards
+                  .filter(
+                    (c) => !c.body.done && c.body.assignees.includes(user.id),
+                  )
+                  .sort((a, b) =>
+                    (a.body.due || "9999").localeCompare(b.body.due || "9999"),
+                  )
+                  .slice(0, 5)}
+                onOpen={setSelected}
+              />
+            </>
+          )}
+          {page === "portfolio" && (
+            <Portfolio onPlan={(id) => go("plan", id)} onOpen={setSelected} />
+          )}{" "}
+          {page === "chat" && <Chat />}{" "}
+          {page === "mine" && (
+            <>
+              <div className="page-heading">
+                <div>
+                  <p className="eyebrow">DITT ARBETE</p>
+                  <h1>Mina uppgifter</h1>
+                </div>
+              </div>
+              <TaskList
+                cards={cards
+                  .filter((c) => c.body.assignees.includes(user.id))
+                  .sort((a, b) => Number(a.body.done) - Number(b.body.done))}
+                onOpen={setSelected}
+              />
+            </>
+          )}
+          {page === "plan" && plan && (
+            <Plan
+              key={plan.id}
+              plan={plan}
+              onOpen={setSelected}
+              onBack={() => go("plans")}
+            />
+          )}{" "}
+          {page === "docs" && (
+            <>
+              <div className="page-heading">
+                <div>
+                  <p className="eyebrow">GEMENSAM KUNSKAP</p>
+                  <h1>Dokument</h1>
+                </div>
+                {writable && (
+                  <Button
+                    variant="primary"
+                    icon={Plus}
+                    onClick={() => setNewDoc(true)}
+                  >
+                    Nytt dokument
+                  </Button>
+                )}
+              </div>
+              <label className="search">
+                <Search size={17} />
+                <input
+                  aria-label="Sök dokument"
+                  placeholder="Sök dokument…"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                />
+              </label>
+              <div className="doc-grid">
+                {all("doc")
+                  .filter((d) =>
+                    (
+                      d.body.title +
+                      " " +
+                      childrenOf(d.id, "block")
+                        .map((b) => JSON.stringify(b.body))
+                        .join(" ")
+                    )
+                      .toLowerCase()
+                      .includes(query.toLowerCase()),
+                  )
+                  .map((d) => (
+                    <button
+                      className="doc-tile"
+                      key={d.id}
+                      onClick={() => setSelected(d.id)}
+                    >
+                      <BookOpen size={22} />
+                      <h2>{d.body.title}</h2>
+                      <span>
+                        {
+                          {
+                            document: "Dokument",
+                            wiki: "Kunskapsartikel",
+                            journal: "Arbetslogg",
+                          }[d.body.category]
+                        }
+                      </span>
+                    </button>
+                  ))}
+              </div>
+              {!all("doc").length && (
+                <Empty
+                  title="En plats för det ni vet"
+                  text="Samla rutiner, mötesanteckningar och gemensamma arbetsdokument."
+                />
+              )}
+            </>
+          )}
+        </main>
+      </div>
+      {newPlan && (
+        <CreatePlan
+          onClose={() => setNewPlan(false)}
+          onCreated={(p) => go("plan", p.id)}
+        />
+      )}
+      {newDoc && (
+        <NewName
+          title="Nytt dokument"
+          onClose={() => setNewDoc(false)}
+          onSave={async (title) => {
+            const d = await create("doc", { title });
+            setSelected(d.id);
+          }}
+        />
+      )}
+      {teamModal && (
+        <NewName
+          title="Skapa team"
+          onClose={() => setTeamModal(false)}
+          onSave={async (name) => {
+            const t = await api("/teams", { method: "POST", body: { name } });
+            await refreshTeams();
+            setTeamId(t.id);
+          }}
+        />
+      )}
+      {invite && <TeamModal onClose={() => setInvite(false)} />}{" "}
+      {notifications && (
+        <Notifications
+          onClose={() => setNotifications(false)}
+          onOpen={(id) => {
+            setTrail([]);
+            if (get(id)?.kind === "message") go("chat");
+            else setSelected(id);
+          }}
+        />
+      )}{" "}
+      {archive && <ArchiveView onClose={() => setArchive(false)} />}{" "}
+      {selection && ["card", "doc"].includes(selection.kind) && (
+        <CardPanel
+          key={selection.id}
+          record={selection}
+          onClose={() => {
+            setSelected(trail[trail.length - 1] || "");
+            setTrail((t) => t.slice(0, -1));
+          }}
+          onOpen={(id) => {
+            setTrail((t) => [...t, selected]);
+            setSelected(id);
+          }}
+        />
+      )}
+    </div>
+  );
+}
+function Nav({ icon: Icon, children, active, onClick }) {
+  return (
+    <button
+      className={`nav-item ${active ? "active" : ""}`}
+      aria-current={active ? "page" : undefined}
+      onClick={onClick}
+    >
+      <Icon size={19} />
+      {children}
+    </button>
+  );
+}
+function Auth() {
+  const { setUser, refreshTeams } = useApp(),
+    [register, setRegister] = useState(false),
+    [name, setName] = useState(""),
+    [email, setEmail] = useState(""),
+    [password, setPassword] = useState(""),
+    [error, setError] = useState(""),
+    [busy, setBusy] = useState(false);
+  return (
+    <div className="auth-page">
+      <div className="auth-card">
+        <div className="brand">
+          <span className="brand-symbol">
+            <PanelTop />
+          </span>
+          Samplanering
+        </div>
+        <h1>{register ? "Välkommen till teamet" : "Välkommen tillbaka"}</h1>
+        <p>Planer, uppgifter och dokument. På samma plats.</p>
+        <form
+          onSubmit={async (e) => {
+            e.preventDefault();
+            setBusy(true);
+            setError("");
+            try {
+              const u = await api(register ? "/register" : "/login", {
+                method: "POST",
+                body: { email, password, ...(register ? { name } : {}) },
+              });
+              setUser(u);
+              const token = new URLSearchParams(location.search).get("invite");
+              if (token) {
+                await api("/join", { method: "POST", body: { token } });
+                history.replaceState(null, "", location.pathname);
+              }
+              await refreshTeams();
+            } catch (e) {
+              setError(e.message);
+            } finally {
+              setBusy(false);
+            }
+          }}
+        >
+          {register && (
+            <Field label="Ditt namn">
+              <input
+                autoComplete="name"
+                required
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+              />
+            </Field>
+          )}
+          <Field label="E-post">
+            <input
+              type="email"
+              autoComplete="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+          </Field>
+          <Field
+            label="Lösenord"
+            hint={register ? "Minst 12 tecken." : undefined}
+          >
+            <input
+              type="password"
+              minLength={register ? 12 : 1}
+              maxLength={128}
+              autoComplete={register ? "new-password" : "current-password"}
+              required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+          </Field>
+          {error && (
+            <p role="alert" className="inline-error">
+              {error}
+            </p>
+          )}
+          <Button variant="primary" disabled={busy}>
+            {busy ? "Vänta…" : register ? "Skapa konto" : "Logga in"}
+          </Button>
+        </form>
+        <Button
+          variant="text"
+          onClick={() => {
+            setRegister(!register);
+            setError("");
+          }}
+        >
+          {register
+            ? "Har du redan ett konto? Logga in"
+            : "Ny här? Skapa konto"}
+        </Button>
+      </div>
+    </div>
+  );
+}
+function Welcome() {
+  const { refreshTeams, setTeamId, act, user } = useApp(),
+    [name, setName] = useState(""),
+    [error, setError] = useState("");
+  return (
+    <div className="auth-page">
+      <div className="auth-card">
+        <h1>Hej {user.name.split(" ")[0]}.</h1>
+        <p>Vad heter teamet du vill planera med?</p>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            act(async () => {
+              const t = await api("/teams", { method: "POST", body: { name } });
+              await refreshTeams();
+              setTeamId(t.id);
+            });
+          }}
+        >
+          <Field label="Teamets namn">
+            <input
+              autoFocus
+              required
+              maxLength={100}
+              placeholder="Till exempel Digitalisering"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+            />
+          </Field>
+          <Button variant="primary">Skapa team</Button>
+        </form>
+        <JoinTeam />
+      </div>
+    </div>
+  );
+}
+function JoinTeam() {
+  const { refreshTeams, setTeamId, act } = useApp();
+  const [token, setToken] = useState(
+    new URLSearchParams(location.search).get("invite") || "",
+  );
+  return (
+    <details>
+      <summary>Har du fått en inbjudan?</summary>
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          act(async () => {
+            let t = token;
+            try {
+              t = new URL(token).searchParams.get("invite") || token;
+            } catch {}
+            const r = await api("/join", {
+              method: "POST",
+              body: { token: t },
+            });
+            await refreshTeams();
+            setTeamId(r.teamId);
+            history.replaceState(null, "", location.pathname);
+          });
+        }}
+      >
+        <input
+          required
+          aria-label="Inbjudningslänk"
+          placeholder="Klistra in inbjudningslänken"
+          value={token}
+          onChange={(e) => setToken(e.target.value)}
+        />
+        <Button variant="primary">Gå med i teamet</Button>
+      </form>
+    </details>
+  );
+}
+function TeamModal({ onClose }) {
+  const { state, teamId, act, reload } = useApp();
+  const [role, setRole] = useState("editor"),
+    [link, setLink] = useState(""),
+    [copied, setCopied] = useState(false);
+  return (
+    <Modal title="Team och delning" onClose={onClose}>
+      <div className="member-list">
+        {state.members.map((m) => (
+          <div className="member" key={m.id}>
+            <Avatar name={m.name} />
+            <strong>{m.name}</strong>
+            <span>
+              {
+                { owner: "Ägare", editor: "Kan redigera", viewer: "Kan läsa" }[
+                  m.role
+                ]
+              }
+            </span>
+            {state.role === "owner" && m.role !== "owner" && (
+              <Button
+                onClick={() => {
+                  if (confirm(`Ta bort ${m.name} från teamet?`))
+                    act(async () => {
+                      await api(`/teams/${teamId}/members/${m.id}`, {
+                        method: "DELETE",
+                      });
+                      await reload();
+                    });
+                }}
+              >
+                Ta bort
+              </Button>
+            )}
+          </div>
+        ))}
+      </div>
+      {state.role === "owner" && (
+        <>
+          <h3>Bjud in en kollega</h3>
+          <Field label="Behörighet">
+            <select value={role} onChange={(e) => setRole(e.target.value)}>
+              <option value="editor">Kan redigera</option>
+              <option value="viewer">Kan läsa</option>
+            </select>
+          </Field>
+          <Button
+            variant="primary"
+            onClick={() =>
+              act(async () => {
+                const r = await api(`/teams/${teamId}/invites`, {
+                  method: "POST",
+                  body: { role },
+                });
+                setLink(location.origin + "/?invite=" + r.token);
+                setCopied(false);
+              })
+            }
+          >
+            Skapa inbjudningslänk
+          </Button>
+          {link && (
+            <div className="invite-result">
+              <input
+                aria-label="Inbjudningslänk"
+                readOnly
+                value={link}
+                onFocus={(e) => e.target.select()}
+              />
+              <Button
+                onClick={() =>
+                  act(async () => {
+                    await navigator.clipboard.writeText(link);
+                    setCopied(true);
+                  })
+                }
+              >
+                {copied ? "Kopierad" : "Kopiera länk"}
+              </Button>
+              <small>
+                Länken kan användas en gång och gäller i sju dagar. Dela den med
+                personen du vill bjuda in.
+              </small>
+            </div>
+          )}
+        </>
+      )}
+      <JoinTeam />
+    </Modal>
+  );
+}
+export function TaskList({ cards, onOpen }) {
+  const { get, state, patch, act, writable } = useApp();
+  if (!cards.length)
+    return <p className="quiet-empty">Inga uppgifter här just nu.</p>;
+  return (
+    <div className="task-list">
+      {cards.map((c) => (
+        <div className="task-row" key={c.id}>
+          <input
+            type="checkbox"
+            aria-label={"Markera " + c.body.title + " som klar"}
+            checked={c.body.done}
+            disabled={!writable}
+            onChange={(e) => act(() => patch(c, { done: e.target.checked }))}
+          />
+          <button onClick={() => onOpen(c.id)}>
+            <strong className={c.body.done ? "done" : ""}>
+              {c.body.title}
+            </strong>
+            <small>{get(c.parent_id)?.body.title}</small>
+          </button>
+          <span
+            className={c.body.due < today() && !c.body.done ? "overdue" : ""}
+          >
+            {c.body.due}
+          </span>
+          <div className="avatars">
+            {c.body.assignees.map((id) => (
+              <Avatar
+                key={id}
+                name={state.members.find((m) => m.id === id)?.name}
+              />
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+export function TaskCard({ card: c, onOpen }) {
+  const { state, childrenOf, writable } = useApp();
+  const checks = childrenOf(c.id, "block").flatMap((b) => b.body.checked || []),
+    comments = childrenOf(c.id, "comment");
+  return (
+    <button
+      className={`task-card ${c.body.done ? "completed" : ""}`}
+      draggable={writable}
+      onDragStart={(e) => e.dataTransfer.setData("text/plain", c.id)}
+      onClick={() => onOpen(c.id)}
+    >
+      <div className="card-title">
+        {c.body.done ? <Check size={17} /> : <span className="empty-check" />}
+        <h3>{c.body.title}</h3>
+      </div>
+      {c.body.tags.length > 0 && (
+        <div className="tags">
+          {c.body.tags.map((t) => (
+            <span key={t}>{t}</span>
+          ))}
+        </div>
+      )}
+      <div className="card-meta">
+        {c.body.due && (
+          <span
+            className={c.body.due < today() && !c.body.done ? "overdue" : ""}
+          >
+            <CalendarDays size={14} />
+            {new Date(c.body.due + "T12:00:00").toLocaleDateString("sv-SE", {
+              day: "numeric",
+              month: "short",
+            })}
+          </span>
+        )}
+        {checks.length > 0 && (
+          <span>
+            <CheckSquare size={14} />
+            {checks.filter((x) => x.done).length}/{checks.length}
+          </span>
+        )}
+        {comments.length > 0 && (
+          <span>
+            <MessageSquare size={14} />
+            {comments.length}
+          </span>
+        )}
+        <span className="avatars">
+          {c.body.assignees.slice(0, 3).map((id) => (
+            <Avatar
+              key={id}
+              name={state.members.find((m) => m.id === id)?.name}
+            />
+          ))}
+        </span>
+      </div>
+    </button>
+  );
+}
+export function CardPanel({ record: r, onClose, onOpen }) {
+  const { state, childrenOf, get, patch, act, writable } = useApp();
+  const isCard = r.kind === "card";
+  const [historyOpen, setHistoryOpen] = useState(false);
+  return (
+    <Modal title={isCard ? "Uppgift" : "Dokument"} sheet wide onClose={onClose}>
+      <div className="card-panel">
+        <DraftText
+          className="detail-title"
+          label="Titel"
+          value={r.body.title}
+          version={r.version}
+          disabled={!writable}
+          onSave={(v, version) => patch(r, { title: v }, version)}
+        />
+        {isCard && (
+          <>
+            <div className="detail-meta">
+              <Field label="Kolumn">
+                <select
+                  disabled={!writable}
+                  value={r.body.bucketId}
+                  onChange={(e) => {
+                    const bucket = get(e.target.value);
+                    act(() =>
+                      patch(r, { bucketId: bucket.id, done: bucket.body.done }),
+                    );
+                  }}
+                >
+                  {childrenOf(r.parent_id, "bucket").map((b) => (
+                    <option key={b.id} value={b.id}>
+                      {b.body.title}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              <Field label="Status">
+                <select
+                  value={r.body.done ? "done" : "open"}
+                  disabled={!writable}
+                  onChange={(e) =>
+                    act(() => patch(r, { done: e.target.value === "done" }))
+                  }
+                >
+                  <option value="open">Öppen</option>
+                  <option value="done">Klar</option>
+                </select>
+              </Field>
+              <Field label="Startdatum">
+                <input
+                  type="date"
+                  value={r.body.start}
+                  disabled={!writable}
+                  onChange={(e) =>
+                    act(() => patch(r, { start: e.target.value }))
+                  }
+                />
+              </Field>
+              <Field label="Slutdatum">
+                <input
+                  type="date"
+                  min={r.body.start || undefined}
+                  value={r.body.due}
+                  disabled={!writable}
+                  onChange={(e) => act(() => patch(r, { due: e.target.value }))}
+                />
+              </Field>
+            </div>
+            <fieldset className="assignees">
+              <legend>Ansvariga</legend>
+              {state.members.map((m) => (
+                <label key={m.id}>
+                  <input
+                    type="checkbox"
+                    disabled={!writable}
+                    checked={r.body.assignees.includes(m.id)}
+                    onChange={(e) =>
+                      act(() =>
+                        patch(r, {
+                          assignees: e.target.checked
+                            ? [...r.body.assignees, m.id]
+                            : r.body.assignees.filter((id) => id !== m.id),
+                        }),
+                      )
+                    }
+                  />
+                  <Avatar name={m.name} />
+                  {m.name}
+                </label>
+              ))}
+            </fieldset>
+          </>
+        )}
+        <>{isCard && <CustomFields record={r} />}</>
+        {!isCard && (
+          <Field label="Sorts dokument">
+            <select
+              disabled={!writable}
+              value={r.body.category}
+              onChange={(e) =>
+                act(() => patch(r, { category: e.target.value }))
+              }
+            >
+              <option value="document">Dokument</option>
+              <option value="wiki">Kunskapsartikel</option>
+              <option value="journal">Arbetslogg</option>
+            </select>
+          </Field>
+        )}
+        <Document record={r} />
+        <Comments record={r} />
+        {isCard && <CardAdvanced record={r} onOpen={onOpen} />}
+        <Button icon={History} onClick={() => setHistoryOpen(true)}>
+          Visa ändringshistorik
+        </Button>
+        {historyOpen && (
+          <HistoryView record={r} onClose={() => setHistoryOpen(false)} />
+        )}
+        {writable && (
+          <div className="panel-footer">
+            <Button
+              icon={Archive}
+              onClick={() =>
+                act(async () => {
+                  await patch(r, { archived: true });
+                  onClose();
+                })
+              }
+            >
+              Arkivera {isCard ? "uppgift" : "dokument"}
+            </Button>
+          </div>
+        )}
+      </div>
+    </Modal>
+  );
+}

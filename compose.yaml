@@ -1,0 +1,15 @@
+services:
+  app:
+    build: .
+    init: true
+    restart: unless-stopped
+    ports:
+      - "${BIND_ADDRESS:-127.0.0.1}:3000:3000"
+    environment:
+      NODE_ENV: development
+      APP_ORIGIN: ${APP_ORIGIN:-http://localhost:3000}
+      TIME_ZONE: ${TIME_ZONE:-Europe/Stockholm}
+    volumes:
+      - samplanering-data:/app/data
+volumes:
+  samplanering-data:

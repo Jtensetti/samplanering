@@ -1,0 +1,30 @@
+services:
+  app:
+    build: .
+    init: true
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      APP_ORIGIN: https://${DOMAIN:?Set DOMAIN in .env}
+      TIME_ZONE: ${TIME_ZONE:-Europe/Stockholm}
+    volumes:
+      - samplanering-data:/app/data
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMAIN: ${DOMAIN:?Set DOMAIN in .env}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      app:
+        condition: service_healthy
+volumes:
+  samplanering-data:
+  caddy-data:
+  caddy-config:
