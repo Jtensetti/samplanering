@@ -42,6 +42,7 @@
 - Uppnått målvärde skickades först vid varje tangenttryckning. Det sparas nu när fältet lämnas och har samma konflikthantering som texten.
 - Chattomnämnanden länkar nu till teamsamtalet. Dialogens rubrik och stängknapp följer med när innehållet rullas.
 - Öppna serverströmmar kunde fördröja normal avstängning. De stängs nu innan processen väntar på avslut.
+- Den första Docker-startkontrollen i CI avbröts vid en återställd anslutning under uppstart. Kontrollen försöker nu igen även vid detta uppstartsfall och visar containerloggen vid kvarstående fel.
 
 **Slutlig lokal verifiering:** tre Node-testfall med flera API-/lagringsassertioner och fyra Playwright-testfall godkända. Produktionsbygget godkänt. `npm audit --omit=dev` rapporterade inga kända sårbarheter vid kontrollen den 28 september 2026. Kod och dokument är formaterade med Prettier. Skärmbilder av desktop, dokument, mobil, tidslinje och uppföljning har granskats.
 
