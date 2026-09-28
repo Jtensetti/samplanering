@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { X, Plus, ChevronDown } from "lucide-react";
 import { useApp } from "./store";
 export function Button({
@@ -15,9 +15,14 @@ export function Button({
     </button>
   );
 }
-export function IconButton({ label, icon: Icon, ...props }) {
+export function IconButton({ label, icon: Icon, variant = "", ...props }) {
   return (
-    <button className="icon-button" aria-label={label} title={label} {...props}>
+    <button
+      className={`icon-button ${variant}`}
+      aria-label={label}
+      title={label}
+      {...props}
+    >
       <Icon size={18} />
     </button>
   );
@@ -89,18 +94,50 @@ export function Modal({
     </dialog>
   );
 }
-export function Field({ label, children, hint }) {
+export function Field({ label, children, hint, width = "", optional = false }) {
   const id = React.useId();
+  const checkbox = children.props.type === "checkbox";
   return (
-    <div className="field">
-      <label htmlFor={id}>{label}</label>
+    <div
+      className={`field ${width ? `field-${width}` : ""} ${checkbox ? "field-check" : ""}`}
+    >
+      <label htmlFor={id}>
+        {label}
+        {optional && <span className="optional"> (valfritt)</span>}
+      </label>
       {React.cloneElement(children, {
         id,
-        "aria-describedby": hint ? id + "-hint" : undefined,
+        "aria-describedby":
+          [children.props["aria-describedby"], hint && id + "-hint"]
+            .filter(Boolean)
+            .join(" ") || undefined,
       })}
       {hint && <small id={id + "-hint"}>{hint}</small>}
     </div>
   );
+}
+export function TextArea({ value, rows = 3, ...props }) {
+  const ref = useRef();
+  useLayoutEffect(() => {
+    const field = ref.current;
+    const resize = () => {
+      // Hidden disclosures are measured again when their available width changes.
+      if (!field.clientWidth) return;
+      field.style.height = "auto";
+      field.style.height = Math.min(field.scrollHeight + 2, 480) + "px";
+    };
+    resize();
+    let width = field.clientWidth;
+    const observer = new ResizeObserver(() => {
+      if (width !== field.clientWidth) {
+        width = field.clientWidth;
+        resize();
+      }
+    });
+    observer.observe(field);
+    return () => observer.disconnect();
+  }, [value, rows]);
+  return <textarea {...props} ref={ref} value={value} rows={rows} />;
 }
 export function Empty({ title, text, children }) {
   return (
@@ -126,7 +163,14 @@ export function Avatar({ name }) {
     </span>
   );
 }
-export function NewName({ title, label = "Namn", onSave, onClose, children }) {
+export function NewName({
+  title,
+  label = "Namn",
+  onSave,
+  onClose,
+  children,
+  multiline = false,
+}) {
   const [value, set] = useState(""),
     [busy, setBusy] = useState(false);
   const { act } = useApp();
@@ -144,13 +188,14 @@ export function NewName({ title, label = "Namn", onSave, onClose, children }) {
         }}
       >
         <Field label={label}>
-          <input
-            required
-            maxLength={200}
-            autoFocus
-            value={value}
-            onChange={(e) => set(e.target.value)}
-          />
+          {React.createElement(multiline ? TextArea : "input", {
+            required: true,
+            disabled: busy,
+            maxLength: multiline ? 2000 : 200,
+            autoFocus: true,
+            value,
+            onChange: (e) => set(e.target.value),
+          })}
         </Field>
         {children}
         <div className="actions">
@@ -175,7 +220,15 @@ export function DraftText({
   label = "Text",
   disabled = false,
   type = "text",
+  rows = 3,
+  autoSave = true,
+  saveLabel = "Spara",
+  id,
+  "aria-describedby": describedBy,
+  ...inputProps
 }) {
+  const generatedId = React.useId();
+  const fieldId = id || generatedId;
   const [draft, setDraft] = useState(value),
     [dirty, setDirty] = useState(false),
     [saving, setSaving] = useState(false),
@@ -191,10 +244,10 @@ export function DraftText({
     }
   }, [value, version, dirty]);
   useEffect(() => {
-    if (!dirty || saving || conflict || error || disabled) return;
+    if (!autoSave || !dirty || saving || conflict || error || disabled) return;
     const timeout = setTimeout(() => save(), 900);
     return () => clearTimeout(timeout);
-  }, [draft, dirty, saving, conflict, error, disabled]);
+  }, [draft, dirty, saving, conflict, error, disabled, autoSave]);
   useEffect(() => {
     if (!saved) return;
     const timeout = setTimeout(() => setSaved(false), 2200);
@@ -228,10 +281,16 @@ export function DraftText({
     }
   }
   const props = {
+    ...inputProps,
+    id: fieldId,
     value: draft,
     placeholder,
     disabled,
     "aria-label": label,
+    "aria-invalid": Boolean(error),
+    "aria-describedby":
+      [describedBy, error && fieldId + "-error"].filter(Boolean).join(" ") ||
+      undefined,
     className,
     onChange: (e) => {
       if (!dirty) base.current = version;
@@ -241,11 +300,15 @@ export function DraftText({
       setDirty(true);
       setDraft(e.target.value);
     },
-    onBlur: () => save(),
+    onBlur: () => autoSave && save(),
   };
   return (
     <div className="draft" data-dirty={dirty}>
-      {multiline ? <textarea {...props} /> : <input type={type} {...props} />}
+      {multiline ? (
+        <TextArea {...props} rows={rows} />
+      ) : (
+        <input type={type} {...props} />
+      )}
       <span className="save-status" aria-live="polite">
         {saving
           ? "Sparar…"
@@ -255,8 +318,26 @@ export function DraftText({
               ? "Sparat"
               : ""}
       </span>
+      {!autoSave && dirty && !error && (
+        <div className="actions">
+          <Button
+            disabled={saving}
+            onClick={() => {
+              setDraft(value);
+              setDirty(false);
+              setError("");
+              setConflict(false);
+            }}
+          >
+            Avbryt
+          </Button>
+          <Button variant="primary" disabled={saving} onClick={() => save()}>
+            {saving ? "Sparar…" : saveLabel}
+          </Button>
+        </div>
+      )}
       {error && (
-        <div className="inline-error" role="alert">
+        <div id={fieldId + "-error"} className="inline-error" role="alert">
           {error}
           {!conflict && <Button onClick={() => save()}>Försök igen</Button>}
           {conflict && (
@@ -291,7 +372,7 @@ export function Tabs({ id, label, value, items, onChange }) {
           id={`${id}-${item.id}-tab`}
           role="tab"
           aria-selected={value === item.id}
-          aria-controls={`${id}-${item.id}-panel`}
+          aria-controls={`${id}-panel`}
           tabIndex={value === item.id ? 0 : -1}
           onClick={() => onChange(item.id)}
           onKeyDown={(event) => {

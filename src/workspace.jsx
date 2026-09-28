@@ -33,7 +33,6 @@ export function Home({ onPlan, onOpen, onCreate, onMine, onArchive }) {
       <div className="page-heading">
         <div>
           <h1>Planer</h1>
-          <p>Hej {user.name.split(" ")[0]}. Här finns ert gemensamma arbete.</p>
         </div>
         {writable && plans.length > 0 && (
           <Button variant="primary" icon={Plus} onClick={onCreate}>
@@ -54,7 +53,7 @@ export function Home({ onPlan, onOpen, onCreate, onMine, onArchive }) {
           ) : (
             <p className="up-next-empty">
               <CheckCircle2 size={19} />
-              Du har inga öppna uppgifter tilldelade just nu.
+              Inga tilldelade uppgifter just nu.
             </p>
           )}
         </section>
@@ -103,7 +102,7 @@ export function Home({ onPlan, onOpen, onCreate, onMine, onArchive }) {
                       <span>
                         {next
                           ? `${dueLabel(next.body.due)} · ${next.body.title}`
-                          : "Inget inplanerat slutdatum"}
+                          : "Inga slutdatum"}
                       </span>
                     </div>
                     <div className="plan-progress">
@@ -151,7 +150,6 @@ export function MyTasks({ cards, onOpen }) {
       <div className="page-heading">
         <div>
           <h1>Mina uppgifter</h1>
-          <p>Dina uppgifter från teamets alla planer.</p>
         </div>
       </div>
       <Tabs
@@ -167,7 +165,7 @@ export function MyTasks({ cards, onOpen }) {
       />
       <section
         className="my-task-groups"
-        id={`my-tasks-${filter}-panel`}
+        id="my-tasks-panel"
         role="tabpanel"
         aria-labelledby={`my-tasks-${filter}-tab`}
       >

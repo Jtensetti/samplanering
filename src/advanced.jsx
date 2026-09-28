@@ -25,6 +25,7 @@ import {
   Disclosure,
   NewName,
   Empty,
+  TextArea,
 } from "./ui";
 import { TaskList } from "./App";
 import { Timeline } from "./views";
@@ -41,7 +42,7 @@ export function AdvancedPlan({ plan, onOpen }) {
       "sprints",
       "Planera arbetsperiod",
       CalendarRange,
-      "Backlog och gemensamma mål",
+      "Samla uppgifter för en bestämd period",
     ],
     [
       "rules",
@@ -102,9 +103,6 @@ function Rules({ plan }) {
   }[action];
   return (
     <>
-      <p className="muted">
-        Regler körs när en uppgift flyttas till en kolumn.
-      </p>
       {rules.map((r) => (
         <div className="rule-row" key={r.id}>
           <label className="check-inline">
@@ -121,6 +119,7 @@ function Rules({ plan }) {
           </label>
           {writable && (
             <IconButton
+              variant="danger"
               label="Ta bort regel"
               icon={Trash2}
               onClick={() => act(() => remove(r))}
@@ -214,8 +213,7 @@ function Whiteboard({ plan, onOpen }) {
     notes = childrenOf(plan.id, "sticky"),
     cards = childrenOf(plan.id, "card"),
     [selected, setSelected] = useState(""),
-    [newNote, setNewNote] = useState(false),
-    [scale, setScale] = useState(1);
+    [newNote, setNewNote] = useState(false);
   const drag = useRef(null),
     [position, setPosition] = useState(null);
   const chosen = notes.find((n) => n.id === selected);
@@ -234,7 +232,7 @@ function Whiteboard({ plan, onOpen }) {
     <>
       <div className="section-header">
         <p className="muted">
-          Dra lappar i handtaget. Välj en lapp för att redigera och koppla den.
+          Flytta lappar med handtaget eller piltangenterna.
         </p>
         {writable && (
           <Button
@@ -388,6 +386,7 @@ function Whiteboard({ plan, onOpen }) {
           <h3>Redigera lapp</h3>
           <DraftText
             multiline
+            maxLength={2000}
             label="Lappens text"
             value={chosen.body.text}
             version={chosen.version}
@@ -395,7 +394,7 @@ function Whiteboard({ plan, onOpen }) {
             onSave={(v, version) => patch(chosen, { text: v }, version)}
           />
           <div className="detail-meta">
-            <Field label="Färg">
+            <Field label="Färg" width="short">
               <select
                 disabled={!writable}
                 value={chosen.body.color}
@@ -466,6 +465,7 @@ function Whiteboard({ plan, onOpen }) {
                 </Button>
               )}
               <Button
+                variant="danger"
                 icon={Trash2}
                 onClick={() =>
                   act(async () => {
@@ -484,6 +484,7 @@ function Whiteboard({ plan, onOpen }) {
         <NewName
           title="Ny lapp"
           label="Din idé"
+          multiline
           onClose={() => setNewNote(false)}
           onSave={async (text) => {
             const n = await create(
@@ -699,17 +700,20 @@ function Goals({ plan }) {
             <time>{g.body.due}</time>
             {writable && (
               <IconButton
+                variant="danger"
                 label="Ta bort mål"
                 icon={Trash2}
                 onClick={() => act(() => remove(g))}
               />
             )}
           </div>
-          <div className="field">
-            <span>Uppnått hittills</span>
+          <Field label="Uppnått hittills" width="short">
             <DraftText
               label="Uppnått hittills"
               type="number"
+              min="0"
+              step="any"
+              inputMode="decimal"
               disabled={!writable}
               value={String(g.body.current)}
               version={g.version}
@@ -723,7 +727,7 @@ function Goals({ plan }) {
                 return patch(g, { current: Number(value) }, version);
               }}
             />
-          </div>
+          </Field>
         </article>
       ))}
       {adding && (
@@ -750,7 +754,7 @@ function Goals({ plan }) {
             />
           </Field>
           <div className="detail-meta">
-            <Field label="Målvärde">
+            <Field label="Målvärde" width="short">
               <input
                 required
                 type="number"
@@ -768,7 +772,7 @@ function Goals({ plan }) {
               />
             </Field>
           </div>
-          <Field label="Senast">
+          <Field label="Slutdatum" width="date" optional>
             <input
               type="date"
               value={due}
@@ -800,7 +804,7 @@ function Sprints({ plan, onOpen }) {
           value={selected}
           onChange={(e) => setSelected(e.target.value)}
         >
-          <option value="">Backlog · ej inplanerat</option>
+          <option value="">Ej inplanerat</option>
           {sprints.map((s) => (
             <option key={s.id} value={s.id}>
               {s.body.title}
@@ -837,7 +841,7 @@ function Sprints({ plan, onOpen }) {
                   act(() => patch(c, { sprintId: e.target.value }))
                 }
               >
-                <option value="">Backlog</option>
+                <option value="">Ej inplanerat</option>
                 {sprints.map((s) => (
                   <option key={s.id} value={s.id}>
                     {s.body.title}
@@ -875,7 +879,7 @@ function Sprints({ plan, onOpen }) {
             />
           </Field>
           <div className="detail-meta">
-            <Field label="Från">
+            <Field label="Startdatum" width="date">
               <input
                 type="date"
                 required
@@ -883,7 +887,7 @@ function Sprints({ plan, onOpen }) {
                 onChange={(e) => setStart(e.target.value)}
               />
             </Field>
-            <Field label="Till">
+            <Field label="Slutdatum" width="date">
               <input
                 type="date"
                 required
@@ -893,8 +897,12 @@ function Sprints({ plan, onOpen }) {
               />
             </Field>
           </div>
-          <Field label="Gemensamt mål">
-            <textarea value={goal} onChange={(e) => setGoal(e.target.value)} />
+          <Field label="Gemensamt mål" optional>
+            <TextArea
+              rows={3}
+              value={goal}
+              onChange={(e) => setGoal(e.target.value)}
+            />
           </Field>
           <Button variant="primary">Skapa arbetsperiod</Button>
         </form>
@@ -909,9 +917,10 @@ export function CardAdvanced({ record: r, onOpen }) {
     [newSub, setNewSub] = useState(false);
   return (
     <>
-      <Disclosure title="Fler detaljer">
+      <section className="task-properties" aria-label="Fler uppgiftsdetaljer">
+        <h3>Planering</h3>
         <div className="detail-meta">
-          <Field label="Prioritet">
+          <Field label="Prioritet" width="short">
             <select
               disabled={!writable}
               value={r.body.priority}
@@ -924,7 +933,7 @@ export function CardAdvanced({ record: r, onOpen }) {
               <option value="high">Hög</option>
             </select>
           </Field>
-          <Field label="Upprepa när uppgiften blir klar">
+          <Field label="När uppgiften blir klar">
             <select
               disabled={!writable}
               value={r.body.repeat}
@@ -935,8 +944,7 @@ export function CardAdvanced({ record: r, onOpen }) {
               <option value="monthly">Skapa nästa månad</option>
             </select>
           </Field>
-          <div className="field">
-            <label>Etiketter, separerade med komma</label>
+          <Field label="Etiketter" hint="Separera med komma.">
             <DraftText
               label="Etiketter"
               value={r.body.tags.join(", ")}
@@ -959,11 +967,11 @@ export function CardAdvanced({ record: r, onOpen }) {
                 )
               }
             />
-          </div>
-          <div className="field">
-            <label>Uppskattad tid, timmar</label>
+          </Field>
+          <Field label="Uppskattad tid (timmar)" width="short">
             <DraftText
               label="Uppskattad tid, timmar"
+              inputMode="decimal"
               value={String(r.body.estimate)}
               version={r.version}
               disabled={!writable}
@@ -974,7 +982,7 @@ export function CardAdvanced({ record: r, onOpen }) {
                 return patch(r, { estimate: n }, version);
               }}
             />
-          </div>
+          </Field>
           <Field label="Arbetsperiod">
             <select
               disabled={!writable}
@@ -983,7 +991,7 @@ export function CardAdvanced({ record: r, onOpen }) {
                 act(() => patch(r, { sprintId: e.target.value }))
               }
             >
-              <option value="">Backlog</option>
+              <option value="">Ej inplanerat</option>
               {childrenOf(r.parent_id, "sprint").map((s) => (
                 <option key={s.id} value={s.id}>
                   {s.body.title}
@@ -1037,7 +1045,7 @@ export function CardAdvanced({ record: r, onOpen }) {
             </p>
           )}
         </fieldset>
-      </Disclosure>
+      </section>
       {r.body.dependencies.some((id) => !get(id)?.body.done) && (
         <p className="dependency-note">
           Väntar på:{" "}
@@ -1177,7 +1185,7 @@ function TimeTracking({ record: r }) {
           }}
         >
           <div className="detail-meta spaced">
-            <Field label="Minuter">
+            <Field label="Minuter" width="short">
               <input
                 type="number"
                 min="1"
@@ -1187,7 +1195,7 @@ function TimeTracking({ record: r }) {
                 onChange={(e) => setMinutes(e.target.value)}
               />
             </Field>
-            <Field label="Datum">
+            <Field label="Datum" width="date">
               <input
                 type="date"
                 required
@@ -1196,7 +1204,7 @@ function TimeTracking({ record: r }) {
               />
             </Field>
           </div>
-          <Field label="Anteckning">
+          <Field label="Anteckning" optional>
             <input value={note} onChange={(e) => setNote(e.target.value)} />
           </Field>
           <Button>Registrera tid</Button>
@@ -1215,6 +1223,7 @@ function TimeTracking({ record: r }) {
           </span>
           {writable && l.created_by === user.id && (
             <IconButton
+              variant="danger"
               label="Ta bort tidsregistrering"
               icon={Trash2}
               onClick={() => act(() => remove(l))}
@@ -1236,7 +1245,6 @@ export function Portfolio({ onPlan, onOpen }) {
     <>
       <div className="page-heading">
         <div>
-          <p className="eyebrow">GEMENSAM RIKTNING</p>
           <h1>Överblick</h1>
         </div>
         <div className="segmented">
@@ -1294,6 +1302,7 @@ export function Chat() {
   const { all, state, create, act, writable } = useApp(),
     [text, setText] = useState(""),
     [mention, setMention] = useState(""),
+    [busy, setBusy] = useState(false),
     end = useRef();
   const messages = all("message");
   useEffect(() => {
@@ -1303,7 +1312,6 @@ export function Chat() {
     <>
       <div className="page-heading">
         <div>
-          <p className="eyebrow">{state.team.name}</p>
           <h1>Teamsamtal</h1>
         </div>
       </div>
@@ -1326,7 +1334,7 @@ export function Chat() {
         {!messages.length && (
           <Empty
             title="Vad behöver ni prata om?"
-            text="Här når samtalet hela teamet. Frågor om en viss uppgift kan ni skriva direkt i kortet."
+            text="Meddelanden här syns för hela teamet."
           />
         )}
         <div ref={end} />
@@ -1334,9 +1342,11 @@ export function Chat() {
       {writable && (
         <form
           className="chat-compose"
-          onSubmit={(e) => {
+          onSubmit={async (e) => {
             e.preventDefault();
-            act(async () => {
+            if (!text.trim() || busy) return;
+            setBusy(true);
+            await act(async () => {
               await create("message", {
                 text,
                 mentions: mention ? [mention] : [],
@@ -1344,29 +1354,40 @@ export function Chat() {
               setText("");
               setMention("");
             });
+            setBusy(false);
           }}
         >
-          <textarea
-            required
-            aria-label="Meddelande till teamet"
-            placeholder="Skriv till teamet…"
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-          />
+          <Field label="Meddelande till teamet">
+            <TextArea
+              rows={2}
+              required
+              disabled={busy}
+              maxLength={10000}
+              aria-label="Meddelande till teamet"
+              placeholder="Skriv till teamet…"
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+            />
+          </Field>
           <div className="actions">
-            <select
-              value={mention}
-              aria-label="Uppmärksamma kollega"
-              onChange={(e) => setMention(e.target.value)}
-            >
-              <option value="">Uppmärksamma kollega…</option>
-              {state.members.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.name}
-                </option>
-              ))}
-            </select>
-            <Button variant="primary">Skicka meddelande</Button>
+            <Field label="Uppmärksamma kollega" optional>
+              <select
+                disabled={busy}
+                value={mention}
+                aria-label="Uppmärksamma kollega"
+                onChange={(e) => setMention(e.target.value)}
+              >
+                <option value="">Ingen</option>
+                {state.members.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.name}
+                  </option>
+                ))}
+              </select>
+            </Field>
+            <Button variant="primary" disabled={busy || !text.trim()}>
+              {busy ? "Skickar…" : "Skicka meddelande"}
+            </Button>
           </div>
         </form>
       )}

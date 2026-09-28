@@ -59,3 +59,11 @@ Granskningen hittade två problem att rätta: ett första osparat utkast kunde d
 Fem Playwright-testfall passerar lokalt, inklusive sparande utan att lämna fältet, konfliktval, fortsatt skrivning under långsam sparning, tangentbordsnavigation mellan flikar, mobil datumredigering, felåterkoppling och bevarat första utkast vid samtidig ändring. Desktop- och mobilbilder har granskats. Principer, primärkällor och återstående användbarhetsfrågor finns i CLASSROOM.md.
 
 Den första CI-körningen upptäckte ett intermittent fel i simuleringen av långsamt nätverk. Spårningen visade att avregistrering av testets engångsinterceptor kunde lämna en samtidig tillståndshämtning pausad. Interceptorn ligger nu kvar under testet och fördröjer endast den första sparningen. Samma scenario passerade därefter sex lokala körningar i följd.
+
+## Fältgranskning enligt Apple och Material
+
+90 fält och fälttyper har bedömts i UX-REVIEW.md. Gemensamma regler styr kontrollhöjd, textstorlek, korta värden, datum, växande fritext och färgroller. Överflödig introduktionstext är borttagen, medan behörighet, sparande, formatkrav och konsekvenser behålls. Etiketter pekar på faktiska kontroller, textfel kopplas till fältet och mobilens synliga ordning följer fokusordningen. En överflödig nivå med Fler detaljer är borttagen.
+
+Granskningen hittade att redigering av flervalsalternativ nollställde ett befintligt svar. Alternativ redigeras nu med uttrycklig sparning och svaret behålls om det fortfarande finns i listan. Kommentarer och teamsamtal blockerar dubbelsändning medan ett anrop väntar och behåller text vid fel.
+
+Sex Playwright-testfall passerar lokalt. Det nya testet verifierar bland annat långa texter, validering vid rätt fält, svenska decimaler, bibehållet flervalssvar, misslyckad kommentarsändning och 320 px pekskärm. Visuell kontroll omfattar arbetsyta, mobil, planinställningar och namnfältens/färgvalets inbördes geometri. Beräknad kontrast för systempalettens textpar är minst 5,24:1; inmatningsram mot vitt är 3,68:1. Det är en kontroll av dessa färgpar, inte en full certifiering av hela appen.

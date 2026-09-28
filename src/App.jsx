@@ -254,11 +254,11 @@ export default function App() {
               ? ` (${state.notifications.filter((n) => !n.read).length})`
               : ""}
           </Button>
-          <span className="connection">
-            {online
-              ? "Gemensam arbetsyta"
-              : "Återansluter… Dina utkast finns kvar."}
-          </span>
+          {!online && (
+            <span className="connection" role="status">
+              Återansluter… Dina utkast finns kvar.
+            </span>
+          )}
         </header>
         <main id="main" tabIndex={-1}>
           {page === "plans" && (
@@ -292,7 +292,6 @@ export default function App() {
             <>
               <div className="page-heading">
                 <div>
-                  <p className="eyebrow">GEMENSAM KUNSKAP</p>
                   <h1>Dokument</h1>
                 </div>
                 {writable && (
@@ -458,7 +457,6 @@ function Auth() {
           Samplanering
         </div>
         <h1>{register ? "Välkommen till teamet" : "Välkommen tillbaka"}</h1>
-        <p>Planer, uppgifter och dokument. På samma plats.</p>
         <form
           onSubmit={async (e) => {
             e.preventDefault();
@@ -496,6 +494,8 @@ function Auth() {
           <Field label="E-post">
             <input
               type="email"
+              autoCapitalize="none"
+              spellCheck={false}
               autoComplete="email"
               required
               value={email}
@@ -548,7 +548,7 @@ function Welcome() {
     <div className="auth-page">
       <div className="auth-card">
         <h1>Hej {user.name.split(" ")[0]}.</h1>
-        <p>Vad heter teamet du vill planera med?</p>
+        <p>Skapa ett team eller gå med via en inbjudan.</p>
         <form
           onSubmit={(e) => {
             e.preventDefault();
@@ -602,13 +602,17 @@ function JoinTeam() {
           });
         }}
       >
-        <input
-          required
-          aria-label="Inbjudningslänk"
-          placeholder="Klistra in inbjudningslänken"
-          value={token}
-          onChange={(e) => setToken(e.target.value)}
-        />
+        <Field label="Inbjudningslänk">
+          <input
+            required
+            autoCapitalize="none"
+            spellCheck={false}
+            aria-label="Inbjudningslänk"
+            placeholder="Klistra in inbjudningslänken"
+            value={token}
+            onChange={(e) => setToken(e.target.value)}
+          />
+        </Field>
         <Button variant="primary">Gå med i teamet</Button>
       </form>
     </details>
@@ -677,12 +681,14 @@ function TeamModal({ onClose, onNewTeam }) {
           </Button>
           {link && (
             <div className="invite-result">
-              <input
-                aria-label="Inbjudningslänk"
-                readOnly
-                value={link}
-                onFocus={(e) => e.target.select()}
-              />
+              <Field label="Inbjudningslänk">
+                <input
+                  aria-label="Inbjudningslänk"
+                  readOnly
+                  value={link}
+                  onFocus={(e) => e.target.select()}
+                />
+              </Field>
               <Button
                 onClick={() =>
                   act(async () => {
@@ -693,10 +699,7 @@ function TeamModal({ onClose, onNewTeam }) {
               >
                 {copied ? "Kopierad" : "Kopiera länk"}
               </Button>
-              <small>
-                Länken kan användas en gång och gäller i sju dagar. Dela den med
-                personen du vill bjuda in.
-              </small>
+              <small>Gäller en person i sju dagar.</small>
             </div>
           )}
         </>
@@ -837,6 +840,9 @@ export function CardPanel({ record: r, onClose, onOpen }) {
         <div className="task-heading">
           <DraftText
             className="detail-title"
+            multiline
+            rows={1}
+            maxLength={200}
             label="Titel"
             value={r.body.title}
             version={r.version}
@@ -860,36 +866,19 @@ export function CardPanel({ record: r, onClose, onOpen }) {
               {writable
                 ? childrenOf(r.id, "block").length
                   ? "Text sparas automatiskt"
-                  : "Börja i arbetsdokumentet"
+                  : ""
                 : "Du har läsbehörighet"}
             </span>
           </div>
         </div>
         <div className="task-layout">
-          <div className="task-main">
-            <Document record={r} />
-            <Comments record={r} />
-            {isCard && (
-              <Disclosure title="Deluppgifter, kopplingar och tid">
-                <CardAdvanced record={r} onOpen={onOpen} />
-              </Disclosure>
-            )}
-          </div>
           <aside
-            className="task-details"
+            className="task-details task-controls"
             aria-label={isCard ? "Om uppgiften" : "Om dokumentet"}
           >
             {isCard && (
               <>
                 <div className="completion-card">
-                  <h3>{writable ? "Ditt nästa steg" : "Status"}</h3>
-                  <p>
-                    {r.body.done
-                      ? "Uppgiften är markerad som klar."
-                      : writable
-                        ? "Arbeta i dokumentet. Markera uppgiften som klar när ni är färdiga."
-                        : "Uppgiften är öppen."}
-                  </p>
                   {writable && (
                     <Button
                       icon={Check}
@@ -955,9 +944,10 @@ export function CardPanel({ record: r, onClose, onOpen }) {
                         </label>
                       ))}
                     </fieldset>
-                    <Field label="Startdatum">
+                    <Field label="Startdatum" width="date">
                       <input
                         type="date"
+                        max={r.body.due || undefined}
                         disabled={!writable}
                         value={r.body.start}
                         onChange={(e) =>
@@ -965,7 +955,7 @@ export function CardPanel({ record: r, onClose, onOpen }) {
                         }
                       />
                     </Field>
-                    <Field label="Slutdatum">
+                    <Field label="Slutdatum" width="date">
                       <input
                         type="date"
                         disabled={!writable}
@@ -978,11 +968,6 @@ export function CardPanel({ record: r, onClose, onOpen }) {
                     </Field>
                   </div>
                 </details>
-                {parent?.body.fields.some((f) => !f.hidden) && (
-                  <Disclosure title="Planens egna fält" open>
-                    <CustomFields record={r} />
-                  </Disclosure>
-                )}
               </>
             )}
             {!isCard && (
@@ -999,6 +984,29 @@ export function CardPanel({ record: r, onClose, onOpen }) {
                   <option value="journal">Arbetslogg</option>
                 </select>
               </Field>
+            )}
+          </aside>
+          <div className="task-main">
+            <Document record={r} />
+            <Comments record={r} />
+            {isCard && (
+              <Disclosure title="Deluppgifter, kopplingar och tid">
+                <CardAdvanced record={r} onOpen={onOpen} />
+              </Disclosure>
+            )}
+          </div>
+          <aside
+            className="task-details task-extra"
+            aria-label="Fler uppgiftsinställningar"
+          >
+            {isCard && (
+              <>
+                {parent?.body.fields.some((f) => !f.hidden) && (
+                  <Disclosure title="Planens egna fält" open>
+                    <CustomFields record={r} />
+                  </Disclosure>
+                )}
+              </>
             )}
             <div className="task-secondary">
               <Button icon={History} onClick={() => setHistoryOpen(true)}>

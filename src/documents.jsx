@@ -8,7 +8,7 @@ import {
   MoreHorizontal,
 } from "lucide-react";
 import { api, useApp } from "./store";
-import { Button, IconButton, DraftText } from "./ui";
+import { Button, IconButton, DraftText, TextArea, Field } from "./ui";
 export const blockNames = {
   text: "Text",
   heading: "Rubrik",
@@ -215,9 +215,10 @@ function FirstNote({ record, text, onChange, order }) {
         setBusy(false);
       }}
     >
-      <textarea
+      <TextArea
+        rows={4}
         aria-label="Börja skriva i dokumentet"
-        placeholder="Vad behöver göras? Skriv instruktioner eller börja anteckna här…"
+        placeholder="Skriv instruktioner eller anteckningar…"
         value={text}
         disabled={busy}
         onChange={(e) => onChange(e.target.value)}
@@ -225,7 +226,7 @@ function FirstNote({ record, text, onChange, order }) {
       />
       {text && (
         <div className="first-note-actions">
-          <span>Lägg till för att spara</span>
+          <span>Inte sparat ännu</span>
           <Button variant="primary" disabled={busy || !text.trim()}>
             {busy ? "Lägger till…" : "Lägg till text"}
           </Button>
@@ -262,7 +263,11 @@ function Block({ block: b, previous, next }) {
         >
           Flytta ned
         </Button>
-        <Button icon={Trash2} onClick={() => act(() => remove(b))}>
+        <Button
+          variant="danger"
+          icon={Trash2}
+          onClick={() => act(() => remove(b))}
+        >
           Ta bort block
         </Button>
       </div>
@@ -277,7 +282,8 @@ function Block({ block: b, previous, next }) {
           version={b.version}
           label={blockNames[d.type]}
           disabled={!writable}
-          multiline={d.type === "text"}
+          multiline
+          rows={d.type === "heading" ? 1 : 3}
           placeholder={d.type === "text" ? "Skriv här…" : "Rubrik"}
           className={d.type === "heading" ? "heading-input" : "text-input"}
           onSave={(v, version) => save({ text: v }, version)}
@@ -318,28 +324,43 @@ function Block({ block: b, previous, next }) {
               {writable && (
                 <details>
                   <summary>Ändra svarsalternativ</summary>
-                  <DraftText
-                    value={d.options.join("\n")}
-                    multiline
-                    label="Ett alternativ per rad"
-                    version={b.version}
-                    onSave={(v, version) =>
-                      save(
-                        {
-                          options: [
-                            ...new Set(
-                              v
-                                .split("\n")
-                                .map((s) => s.trim())
-                                .filter(Boolean),
-                            ),
-                          ],
-                          value: "",
-                        },
-                        version,
-                      )
-                    }
-                  />
+                  <Field
+                    label="Svarsalternativ"
+                    hint="Ett alternativ per rad. Svaret rensas bara om det valda alternativet tas bort."
+                  >
+                    <DraftText
+                      value={d.options.join("\n")}
+                      multiline
+                      label="Svarsalternativ"
+                      autoSave={false}
+                      saveLabel="Spara alternativ"
+                      version={b.version}
+                      onSave={(v, version) => {
+                        const options = [
+                          ...new Set(
+                            v
+                              .split("\n")
+                              .map((s) => s.trim())
+                              .filter(Boolean),
+                          ),
+                        ];
+                        if (
+                          options.length > 30 ||
+                          options.some((o) => o.length > 100)
+                        )
+                          throw new Error(
+                            "Använd högst 30 alternativ med högst 100 tecken vardera.",
+                          );
+                        return save(
+                          {
+                            options,
+                            value: options.includes(d.value) ? d.value : "",
+                          },
+                          version,
+                        );
+                      }}
+                    />
+                  </Field>
                 </details>
               )}
             </>
@@ -351,24 +372,29 @@ function Block({ block: b, previous, next }) {
           <div className="checklist">
             {d.checked.map((c) => (
               <div key={c.id} className="check-row">
-                <input
-                  aria-label={c.text || "Checklistpunkt"}
-                  type="checkbox"
-                  checked={c.done}
-                  disabled={!writable}
-                  onChange={(e) =>
-                    act(() =>
-                      save({
-                        checked: d.checked.map((x) =>
-                          x.id === c.id ? { ...x, done: e.target.checked } : x,
-                        ),
-                      }),
-                    )
-                  }
-                />
-                <span className={c.done ? "done" : ""}>{c.text}</span>
+                <label className="check-option">
+                  <input
+                    aria-label={c.text || "Checklistpunkt"}
+                    type="checkbox"
+                    checked={c.done}
+                    disabled={!writable}
+                    onChange={(e) =>
+                      act(() =>
+                        save({
+                          checked: d.checked.map((x) =>
+                            x.id === c.id
+                              ? { ...x, done: e.target.checked }
+                              : x,
+                          ),
+                        }),
+                      )
+                    }
+                  />
+                  <span className={c.done ? "done" : ""}>{c.text}</span>
+                </label>
                 {writable && (
                   <IconButton
+                    variant="danger"
                     label={"Ta bort " + c.text}
                     icon={Trash2}
                     onClick={() =>
@@ -404,14 +430,18 @@ function Block({ block: b, previous, next }) {
                 });
               }}
             >
-              <input
-                value={newItem}
-                maxLength={1000}
-                aria-label="Ny checklistpunkt"
-                placeholder="Lägg till en punkt…"
-                onChange={(e) => setNewItem(e.target.value)}
-              />
-              <Button icon={Plus}>Lägg till</Button>
+              <Field label="Ny checklistpunkt">
+                <input
+                  value={newItem}
+                  maxLength={1000}
+                  aria-label="Ny checklistpunkt"
+                  placeholder="Vad behöver göras?"
+                  onChange={(e) => setNewItem(e.target.value)}
+                />
+              </Field>
+              <Button icon={Plus} disabled={!newItem.trim()}>
+                Lägg till
+              </Button>
             </form>
           )}
         </>
@@ -476,18 +506,22 @@ function Block({ block: b, previous, next }) {
       )}
       {d.type === "link" && (
         <>
-          <DraftText
-            label="Webbadress"
-            value={d.value}
-            placeholder="https://…"
-            version={b.version}
-            disabled={!writable}
-            onSave={(v, version) => {
-              if (v && !/^https?:\/\//i.test(v))
-                throw new Error("Använd en adress som börjar med https://");
-              return save({ value: v }, version);
-            }}
-          />
+          <Field label="Webbadress">
+            <DraftText
+              type="url"
+              autoComplete="url"
+              label="Webbadress"
+              value={d.value}
+              placeholder="https://…"
+              version={b.version}
+              disabled={!writable}
+              onSave={(v, version) => {
+                if (v && !/^https?:\/\//i.test(v))
+                  throw new Error("Använd en adress som börjar med https://");
+                return save({ value: v }, version);
+              }}
+            />
+          </Field>
           {/^https?:\/\//i.test(d.value) && (
             <a href={d.value} target="_blank" rel="noopener noreferrer">
               Öppna länken ↗
@@ -519,7 +553,8 @@ function Block({ block: b, previous, next }) {
 export function Comments({ record }) {
   const { childrenOf, create, act, state, writable } = useApp(),
     [text, setText] = useState(""),
-    [mention, setMention] = useState("");
+    [mention, setMention] = useState(""),
+    [busy, setBusy] = useState(false);
   const comments = childrenOf(record.id, "comment");
   return (
     <section className="comments">
@@ -539,14 +574,16 @@ export function Comments({ record }) {
           <p>{c.body.text}</p>
         </article>
       ))}
-      {!comments.length && (
-        <p className="muted">Frågor och överlämningar samlas här.</p>
+      {!comments.length && !writable && (
+        <p className="muted">Inga kommentarer ännu.</p>
       )}
       {writable && (
         <form
-          onSubmit={(e) => {
+          onSubmit={async (e) => {
             e.preventDefault();
-            act(async () => {
+            if (!text.trim() || busy) return;
+            setBusy(true);
+            await act(async () => {
               await create(
                 "comment",
                 { text, mentions: mention ? [mention] : [] },
@@ -555,29 +592,39 @@ export function Comments({ record }) {
               setText("");
               setMention("");
             });
+            setBusy(false);
           }}
         >
-          <textarea
-            aria-label="Kommentar"
-            required
-            placeholder="Skriv en kommentar…"
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-          />
+          <Field label="Kommentar">
+            <TextArea
+              rows={2}
+              aria-label="Kommentar"
+              required
+              disabled={busy}
+              maxLength={10000}
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+            />
+          </Field>
           <div className="actions">
-            <select
-              aria-label="Uppmärksamma kollega"
-              value={mention}
-              onChange={(e) => setMention(e.target.value)}
-            >
-              <option value="">Uppmärksamma kollega…</option>
-              {state.members.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.name}
-                </option>
-              ))}
-            </select>
-            <Button variant="primary">Skicka</Button>
+            <Field label="Uppmärksamma kollega" optional>
+              <select
+                aria-label="Uppmärksamma kollega"
+                value={mention}
+                onChange={(e) => setMention(e.target.value)}
+                disabled={busy}
+              >
+                <option value="">Ingen</option>
+                {state.members.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.name}
+                  </option>
+                ))}
+              </select>
+            </Field>
+            <Button variant="primary" disabled={busy || !text.trim()}>
+              {busy ? "Skickar…" : "Skicka"}
+            </Button>
           </div>
         </form>
       )}

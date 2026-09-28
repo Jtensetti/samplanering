@@ -195,7 +195,7 @@ export function Plan({ plan, onOpen, onBack }) {
         ]}
       />
       <div
-        id={`plan-${plan.id}-${section}-panel`}
+        id={`plan-${plan.id}-panel`}
         role="tabpanel"
         aria-labelledby={`plan-${plan.id}-${section}-tab`}
       >
@@ -248,7 +248,8 @@ export function Plan({ plan, onOpen, onBack }) {
                 <Search size={17} />
                 <input
                   aria-label="Sök uppgifter"
-                  placeholder="Sök i kort och dokument…"
+                  type="search"
+                  placeholder="Sök uppgifter och innehåll"
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                 />
@@ -578,34 +579,35 @@ export function PlanSettings({ plan, onClose, onBack }) {
     [options, setOptions] = useState("");
   return (
     <Modal title="Anpassa plan" wide onClose={onClose}>
-      <div className="field">
-        <span>Planens namn</span>
-        <DraftText
-          label="Planens namn"
-          disabled={!writable}
-          value={plan.body.title}
-          version={plan.version}
-          onSave={(v, version) => patch(plan, { title: v }, version)}
-        />
+      <div className="settings-identity">
+        <Field label="Planens namn">
+          <DraftText
+            label="Planens namn"
+            disabled={!writable}
+            value={plan.body.title}
+            version={plan.version}
+            onSave={(v, version) => patch(plan, { title: v }, version)}
+          />
+        </Field>
+        <Field label="Planfärg" width="short">
+          <select
+            disabled={!writable}
+            value={plan.body.color}
+            onChange={(e) => act(() => patch(plan, { color: e.target.value }))}
+          >
+            {[
+              ["blue", "Blå"],
+              ["teal", "Grön"],
+              ["purple", "Lila"],
+              ["amber", "Gul"],
+            ].map(([v, l]) => (
+              <option key={v} value={v}>
+                {l}
+              </option>
+            ))}
+          </select>
+        </Field>
       </div>
-      <Field label="Färg">
-        <select
-          disabled={!writable}
-          value={plan.body.color}
-          onChange={(e) => act(() => patch(plan, { color: e.target.value }))}
-        >
-          {[
-            ["blue", "Blå"],
-            ["teal", "Grön"],
-            ["purple", "Lila"],
-            ["amber", "Gul"],
-          ].map(([v, l]) => (
-            <option key={v} value={v}>
-              {l}
-            </option>
-          ))}
-        </select>
-      </Field>
       <h3>Kolumner</h3>
       {childrenOf(plan.id, "bucket").map((b) => (
         <div className="settings-row" key={b.id}>
@@ -649,14 +651,19 @@ export function PlanSettings({ plan, onClose, onBack }) {
             });
           }}
         >
-          <input
-            required
-            aria-label="Ny kolumn"
-            placeholder="Namn på ny kolumn"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-          />
-          <Button icon={Plus}>Lägg till kolumn</Button>
+          <Field label="Ny kolumn">
+            <input
+              required
+              maxLength={200}
+              aria-label="Ny kolumn"
+              placeholder="Namn på ny kolumn"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+            />
+          </Field>
+          <Button icon={Plus} disabled={!name.trim()}>
+            Lägg till kolumn
+          </Button>
         </form>
       )}
       <h3 className="spaced">Egna fält på uppgifterna</h3>
@@ -744,7 +751,7 @@ export function PlanSettings({ plan, onClose, onBack }) {
                 onChange={(e) => setLabel(e.target.value)}
               />
             </Field>
-            <Field label="Sorts svar">
+            <Field label="Sorts svar" width="short">
               <select value={type} onChange={(e) => setType(e.target.value)}>
                 <option value="text">Text</option>
                 <option value="number">Tal</option>
@@ -755,7 +762,10 @@ export function PlanSettings({ plan, onClose, onBack }) {
             </Field>
           </div>
           {type === "select" && (
-            <Field label="Alternativ, separerade med komma">
+            <Field
+              label="Svarsalternativ"
+              hint="Separera alternativen med komma."
+            >
               <input
                 required
                 value={options}
@@ -766,22 +776,24 @@ export function PlanSettings({ plan, onClose, onBack }) {
           <Button>Lägg till fält</Button>
         </form>
       )}
-      <h3 className="spaced">Arbetsdokument för nya kort</h3>
-      <select
-        aria-label="Standardmall"
-        disabled={!writable}
-        value={plan.body.defaultTemplateId}
-        onChange={(e) =>
-          act(() => patch(plan, { defaultTemplateId: e.target.value }))
-        }
-      >
-        <option value="">Tomt dokument</option>
-        {all("template").map((t) => (
-          <option key={t.id} value={t.id}>
-            {t.body.title}
-          </option>
-        ))}
-      </select>
+      <h3 className="spaced">Dokumentmall</h3>
+      <Field label="Mall för nya uppgifter">
+        <select
+          aria-label="Standardmall"
+          disabled={!writable}
+          value={plan.body.defaultTemplateId}
+          onChange={(e) =>
+            act(() => patch(plan, { defaultTemplateId: e.target.value }))
+          }
+        >
+          <option value="">Tomt dokument</option>
+          {all("template").map((t) => (
+            <option key={t.id} value={t.id}>
+              {t.body.title}
+            </option>
+          ))}
+        </select>
+      </Field>
       {childrenOf(plan.id, "view").length > 0 && (
         <>
           <h3 className="spaced">Sparade vyer</h3>
@@ -789,7 +801,9 @@ export function PlanSettings({ plan, onClose, onBack }) {
             <div className="settings-row" key={v.id}>
               {v.body.title}
               {writable && (
-                <Button onClick={() => act(() => remove(v))}>Ta bort</Button>
+                <Button variant="danger" onClick={() => act(() => remove(v))}>
+                  Ta bort
+                </Button>
               )}
             </div>
           ))}
@@ -821,16 +835,24 @@ export function CustomFields({ record: r }) {
   if (!plan?.body.fields.length) return null;
   return (
     <div className="custom-fields">
-      <h3>Uppgifter för den här planen</h3>
       <div className="detail-meta">
         {plan.body.fields
           .filter((f) => !f.hidden)
           .map((f) => (
-            <div key={f.id} className="field">
-              <label>{f.label}</label>
+            <Field
+              key={f.id}
+              label={f.label}
+              width={
+                f.type === "number" ? "short" : f.type === "date" ? "date" : ""
+              }
+            >
               {f.type === "text" || f.type === "number" ? (
                 <DraftText
                   value={String(r.body.custom[f.id] ?? "")}
+                  inputMode={f.type === "number" ? "decimal" : undefined}
+                  multiline={f.type === "text"}
+                  rows={2}
+                  maxLength={5000}
                   label={f.label}
                   version={r.version}
                   disabled={!writable}
@@ -889,7 +911,7 @@ export function CustomFields({ record: r }) {
                   }
                 />
               )}
-            </div>
+            </Field>
           ))}
       </div>
     </div>

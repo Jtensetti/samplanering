@@ -73,3 +73,5 @@ Testerna använder egna databaser och konton. `tests/*.test.mjs` verifierar blan
 ## Struktur
 
 `src/` innehåller React-gränssnittet. `server/` innehåller Express-API, validering, SQLite-lagring och schemaläggning. `shared/presets.mjs` innehåller planmallarna. Versioner kontrolleras med `If-Match`; behörighet och teamkopplingar kontrolleras på servern. Sessionskakor är HttpOnly, och i produktion även Secure. Databas, uppladdningar, lösenord och sessionsdata ska inte checkas in i Git.
+
+[Fältgranskning och designregler](docs/UX-REVIEW.md) dokumenterar varje fälttyp, storlekar, färgroller, copy och användarflöden utifrån Apples och Googles riktlinjer.

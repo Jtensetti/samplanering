@@ -9,10 +9,24 @@
   background: #fff;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
+  /* Color names describe roles. Plan/note colors remain user-chosen identities. */
   --blue: #1967d2;
-  --line: #e5e8ed;
+  --primary-hover: #1558b0;
+  --line: #dadce0;
   --muted: #5f6368;
-  --surface: #f7f8fa;
+  --surface: #f6f7f8;
+  --ink: #202124;
+  --control-border: #80868b;
+  --focus: #1967d2;
+  --selected: #e8f0fe;
+  --on-selected: #174ea6;
+  --success: #137333;
+  --success-surface: #e6f4ea;
+  --danger: #b3261e;
+  --danger-surface: #fceeee;
+  --warning: #7a4d00;
+  --warning-surface: #fff4db;
+  --control-height: 44px;
   --radius: 12px;
 }
 * {
@@ -49,7 +63,7 @@ input:focus-visible,
 select:focus-visible,
 textarea:focus-visible,
 summary:focus-visible {
-  outline: 3px solid #84a9ff;
+  outline: 2px solid var(--focus);
 }
 h1,
 h2,
@@ -82,7 +96,7 @@ a {
 input,
 select,
 textarea {
-  border: 1px solid #dce1e8;
+  border: 1px solid var(--control-border);
   border-radius: 8px;
   padding: 10px 12px;
   background: white;
@@ -124,7 +138,7 @@ small {
   font-size: 14px;
   font-weight: 550;
   line-height: 1.35;
-  min-height: 42px;
+  min-height: var(--control-height);
   white-space: normal;
 }
 .button:hover {
@@ -137,7 +151,7 @@ small {
   box-shadow: 0 2px 2px #205bdb12;
 }
 .button.primary:hover {
-  background: #174bbd;
+  background: var(--primary-hover);
 }
 .button.text {
   border-color: transparent;
@@ -151,8 +165,8 @@ small {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 40px;
+  width: var(--control-height);
+  height: var(--control-height);
   color: var(--muted);
   flex-shrink: 0;
 }
@@ -238,7 +252,7 @@ nav {
 .side-caption {
   font-size: 11px;
   letter-spacing: 1.2px;
-  color: #8a929f;
+  color: var(--muted);
   margin: 30px 12px 12px;
   font-weight: 650;
 }
@@ -568,7 +582,7 @@ progress::-webkit-progress-value {
 }
 .save-status {
   font-size: 11px;
-  color: #7a8697;
+  color: var(--muted);
   display: block;
   min-height: 0;
 }
@@ -653,11 +667,11 @@ progress::-webkit-progress-value {
 .status-dot {
   width: 7px;
   height: 7px;
-  background: #6f94e1;
+  background: var(--muted);
   border-radius: 50%;
 }
 .status-dot.green {
-  background: #479b87;
+  background: var(--success);
 }
 .task-card {
   display: block;
@@ -715,7 +729,7 @@ progress::-webkit-progress-value {
   display: flex;
   align-items: center;
   gap: 4px;
-  color: #778297;
+  color: var(--muted);
   font-size: 12px;
 }
 .card-meta .avatar {
@@ -727,7 +741,7 @@ progress::-webkit-progress-value {
   margin-left: auto;
 }
 .overdue {
-  color: #b04443 !important;
+  color: var(--danger) !important;
 }
 .tags {
   display: flex;
@@ -825,9 +839,9 @@ dialog::backdrop {
   flex: 1;
 }
 .dialog-notice.error {
-  background: #fceeed;
-  color: #9d2520;
-  border-color: #efc4bf;
+  background: var(--danger-surface);
+  color: var(--danger);
+  border-color: var(--danger);
 }
 .dialog-notice .icon-button {
   color: inherit;
@@ -1030,7 +1044,7 @@ dialog::backdrop {
 }
 .comment time {
   font-size: 11px;
-  color: #8d96a4;
+  color: var(--muted);
   margin-left: 12px;
 }
 .comment p {
@@ -1066,7 +1080,7 @@ dialog::backdrop {
   z-index: 1000;
 }
 .toast.error {
-  background: #8f353a;
+  background: var(--danger);
 }
 .toast .icon-button {
   color: white;
@@ -1077,11 +1091,11 @@ dialog::backdrop {
   color: white;
 }
 .inline-error {
-  background: #fff0f0;
-  border: 1px solid #e8b8b8;
+  background: var(--danger-surface);
+  border: 1px solid var(--danger);
   padding: 12px;
   border-radius: 8px;
-  color: #9b3039;
+  color: var(--danger);
   font-size: 14px;
   line-height: 1.5;
 }
@@ -1779,9 +1793,9 @@ summary {
 }
 .rule-builder,
 .inset-form {
-  background: #f6f9fe;
-  padding: 22px;
-  border: 1px solid #e0e9f8;
+  background: var(--surface);
+  padding: 24px;
+  border: 1px solid var(--line);
   border-radius: 12px;
   margin: 24px 0;
 }
@@ -1996,8 +2010,9 @@ summary {
 }
 .dependency-note {
   padding: 12px 15px;
-  background: #fff8e8;
-  border: 1px solid #eee0b5;
+  background: var(--warning-surface);
+  color: var(--warning);
+  border: 1px solid var(--warning);
   border-radius: 8px;
   font-size: 14px;
   margin-top: 16px;
@@ -2376,15 +2391,15 @@ summary {
   font-size: 12px;
 }
 .task-status {
-  background: #eaf1fc;
+  background: var(--surface);
   border-radius: 20px;
   padding: 5px 12px;
-  color: #174ea6;
+  color: var(--muted);
   font-weight: 600;
 }
 .task-status.is-done {
-  background: #e6f4ea;
-  color: #176839;
+  background: var(--success-surface);
+  color: var(--success);
 }
 .task-layout {
   display: grid;
@@ -2576,11 +2591,6 @@ summary {
 .comments form > textarea {
   min-height: 74px;
 }
-.comments form .button.primary {
-  background: #fff;
-  color: var(--blue);
-  border-color: #c5d8f5;
-}
 .task-main .disclosure {
   font-size: 14px;
 }
@@ -2636,10 +2646,8 @@ summary {
     border: 0;
     padding: 0;
     width: 100%;
-    display: contents;
   }
   .completion-card {
-    order: -3;
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -2659,7 +2667,6 @@ summary {
     font-size: 13px;
   }
   .assignment-details {
-    order: -2;
     width: 100%;
   }
   .task-details > .disclosure:not(.assignment-details) {

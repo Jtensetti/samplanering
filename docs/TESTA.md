@@ -21,3 +21,11 @@ Testa med 3–5 personer på samma server. Avsätt cirka 30 minuter. Låt en per
 - Vilka menyer eller begrepp behöver förklaras? De är kandidater för förenkling.
 
 Anteckna konkret situation, förväntad handling, faktisk handling och förslag till ändring. Prioritera stopp i flödet och osäkerhet kring sparande före nya funktioner. De automatiska testerna verifierar beteende; de ersätter inte detta användartest.
+
+## Fält och återkoppling
+
+- Prova en lång uppgiftstitel och tio rader text. Fälten ska växa och hela innehållet ska gå att läsa.
+- Välj ett svar i ett flervalsfält, lägg sedan till ett alternativ och välj Spara alternativ. Det tidigare svaret ska finnas kvar.
+- Tryck på texten intill en kryssruta; hela etiketten ska fungera.
+- Ange en bokstav i uppskattad tid. Felet ska visas vid fältet; rätta till exempel till 2,5.
+- Kontrollera en smal telefon: inga fält utanför dialogen, tydliga träffytor och samma ordning vid tabbnavigering som på skärmen.
