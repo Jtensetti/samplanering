@@ -6,7 +6,7 @@ Tre etapper är implementerade: gemensam tavla och arbetsdokument; mallar, egna 
 
 ## Gratis molnpilot
 
-[Cloudflare + Firebase Auth](docs/PILOT.md) kör appen, teamdata och bilagor på Cloudflare och inloggningen i Firebase-projektet `planner-tensetti`. Konfiguration, kvoter och tester är förberedda. Publicering kräver kontoåtkomst och webbappens Firebase-konfiguration; ingen publik adress är ännu verifierad.
+[Cloudflare + Firebase Auth](docs/PILOT.md) kör appen, teamdata och bilagor på Cloudflare och inloggningen i Firebase-projektet `planner-tensetti`. Konfiguration, kvoter och tester är förberedda. Webbappen är registrerad och dess publika Firebase-konfiguration är inlagd. Aktivering av Email/Password och Cloudflare-åtkomst återstår; ingen publik adress är ännu verifierad.
 
 ## Starta på din dator
 

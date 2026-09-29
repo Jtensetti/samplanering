@@ -13,6 +13,8 @@
   },
   "vars": {
     "FIREBASE_PROJECT_ID": "planner-tensetti",
+    "FIREBASE_API_KEY": "AIzaSyCzeeuGEp8LhwP9bAqAYCB8sjMMyB8KmKY",
+    "FIREBASE_APP_ID": "1:817306734982:web:e0ccd6104a21e86cb89c07",
     "GOOGLE_LOGIN": "false",
     "TIME_ZONE": "Europe/Stockholm",
   },

@@ -13,8 +13,8 @@ const config = parse(readFileSync("wrangler.jsonc", "utf8"), errors, {
   allowTrailingComma: true,
 });
 if (errors.length) throw new Error("Kontrollera syntaxen i wrangler.jsonc.");
-const apiKey = process.env.FIREBASE_API_KEY;
-const appId = process.env.FIREBASE_APP_ID;
+const apiKey = process.env.FIREBASE_API_KEY || config.vars.FIREBASE_API_KEY;
+const appId = process.env.FIREBASE_APP_ID || config.vars.FIREBASE_APP_ID;
 if (!apiKey || !/^AIza[\w-]{35}$/.test(apiKey)) {
   throw new Error(
     "Fyll i Firebase-webbappens publika FIREBASE_API_KEY i .dev.vars. Se docs/PILOT.md.",

@@ -1,6 +1,6 @@
 # Pilot på Cloudflare med Firebase-inloggning
 
-Appen kan köras på Cloudflare Workers Free. Firebase-projektet är **planner-tensetti**, projektnummer **817306734982**. Ingen publik instans har ännu verifierats; kontoåtkomst och Firebase-webbkonfiguration behövs före publicering.
+Appen kan köras på Cloudflare Workers Free. Firebase-projektet är **planner-tensetti**, projektnummer **817306734982**. Webbappen **Samplanering pilot** är registrerad och dess publika SDK-konfiguration finns i `wrangler.jsonc`. Ingen publik instans har ännu verifierats. Aktivering av Email/Password och Cloudflare-åtkomst återstår.
 
 ## Vad körs var?
 
@@ -20,7 +20,7 @@ Samma verksamhetslogik används i Node-servern och Cloudflare-versionen. Firesto
 1. I [Firebase Console](https://console.firebase.google.com/project/planner-tensetti/overview): registrera en webbapp under projektinställningarna om ingen finns. Kopiera dess publika `apiKey` och `appId`. Projektnumret är inte ett app-id.
 2. Aktivera **Authentication → Sign-in method → Email/Password**. Appen använder lösenord med minst 12 tecken; sätt samma minimilängd i Firebase Auths lösenordspolicy. E-postverifiering krävs inte i den här piloten. Google-inloggning och SMS används inte.
 3. Logga in på Cloudflare med `npx wrangler login`. Välj avsett konto med **Workers Free**. Om du har flera konton kan `CLOUDFLARE_ACCOUNT_ID` sättas i din lokala miljö. Skriptet uppgraderar ingen betalplan.
-4. Kopiera `.dev.vars.example` till `.dev.vars` och fyll i webbappens `FIREBASE_API_KEY` och valfritt `FIREBASE_APP_ID`. Detta är publik klientkonfiguration, inte ett servicekonto eller en administratörsnyckel. Filen ignoreras av Git.
+4. Pilotens `FIREBASE_API_KEY` och `FIREBASE_APP_ID` finns redan i `wrangler.jsonc`. Detta är publik klientkonfiguration, inte ett servicekonto eller en administratörsnyckel. Vid behov kan `.dev.vars.example` kopieras till `.dev.vars` för lokala åsidosättningar; den filen ignoreras av Git.
 5. Kör följande med Node.js 24:
 
 ```sh
