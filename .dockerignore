@@ -7,3 +7,9 @@ data
 test-results
 playwright-report
 *.log
+.dev.vars*
+.wrangler
+.pilot-dist
+.pilot-test-data
+.firebase
+.pilot-deploy.json

@@ -67,3 +67,22 @@ Den första CI-körningen upptäckte ett intermittent fel i simuleringen av lån
 Granskningen hittade att redigering av flervalsalternativ nollställde ett befintligt svar. Alternativ redigeras nu med uttrycklig sparning och svaret behålls om det fortfarande finns i listan. Kommentarer och teamsamtal blockerar dubbelsändning medan ett anrop väntar och behåller text vid fel.
 
 Sex Playwright-testfall passerar lokalt. Det nya testet verifierar bland annat långa texter, validering vid rätt fält, svenska decimaler, bibehållet flervalssvar, misslyckad kommentarsändning och 320 px pekskärm. Visuell kontroll omfattar arbetsyta, mobil, planinställningar och namnfältens/färgvalets inbördes geometri. Beräknad kontrast för systempalettens textpar är minst 5,24:1; inmatningsram mot vitt är 3,68:1. Det är en kontroll av dessa färgpar, inte en full certifiering av hela appen.
+
+## Cloudflare-pilot med Firebase Auth
+
+Den gemensamma verksamhetslogiken har lyfts ut från Express och återanvänds i en SQLite-arbetsyta per team på Cloudflare. Firebase hanterar konto och lösenord, medan dokument, behörigheter, regler, påminnelser och bilagor stannar på Cloudflare. Node-/Docker-versionen finns kvar.
+
+**Kritiska fynd och rättningar:**
+
+- En enda gemensam arbetsyta hade samlat alla team i samma databas. Varje team har nu ett separat Durable Object och en serverkontrollerad medlemslista.
+- Cloudflare RPC bevarar inte egna statusfält på undantag. Ett uttryckligt svarskontrakt bevarar bland annat 403, 409 och 410 så att konflikt- och behörighetsflöden fungerar.
+- En inbjudan kunde förbrukas innan teamlistan hunnit uppdateras. Samma mottagare kan säkert försöka igen, medan andra mottagare nekas återanvändning.
+- Teamskapande kan skickas dubbelt vid långsamt nätverk. Knappen visar vänteläge och återförsök använder samma anrops-id.
+- Firebase-token ska inte ligga i WebSocket-adressen. Anslutningen får i stället en engångsbiljett, kontrollerar medlemskap och kopplas från när åtkomsten tas bort.
+- Bilagor kan inte längre öppnas med en oskyddad statisk URL. Klienten hämtar dem med Firebase-token och skapar en tillfällig lokal länk. Uppladdning kontrollerar behörighet och reserverar utrymme före väntan på KV.
+- Normal utloggning kan stänga en WebSocket utan statuskod. Servern svarar nu med en giltig stängningskod i stället för att försöka skicka den reserverade koden 1005.
+- Produktionsbygget blockerar testprojekt/emulatoradress. Publiceringsskriptet tolkar JSONC, inklusive kommentarer och avslutande kommatecken. Docker-bygget inkluderar den gemensamma validering som frontend använder.
+
+**Verifiering:** tre Node-testfall och sex befintliga webbläsartestfall passerar. Fyra testfall i Cloudflares riktiga lokala körmiljö verifierar bland annat teamisolering, roller, versionskonflikter, återöppnad lagring, signerade token, engångsinbjudningar, indragen direktåtkomst, regler, återkommande datum, larm, timer och privata bilagor. Ett separat webbläsartest med två Firebase-emulatorkonton verifierar registrering, inbjudan, inloggning, begäran om lösenordsåterställning, nedladdning av bilaga, dokumentändringar mellan användare och inloggning efter omladdning. Testerna skickar inga riktiga mejl.
+
+**Kvar:** faktisk driftsättning, projektets inloggningsinställningar, leverans av återställningsmejl och prestanda inom Workers Free har inte verifierats. Cloudflare- och Firebase-kontona är inte tillgängliga i utvecklingsmiljön. Piloten saknar samordnad export/återställning av SQLite och KV och automatisk rensning av historiska bilagor. Dessa gränser och kostnadskvoter beskrivs i PILOT.md. Ingen migrering av befintliga Node-konton eller data har gjorts.

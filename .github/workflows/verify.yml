@@ -24,6 +24,11 @@ jobs:
       - run: npm run build
       - run: npx playwright install --with-deps chromium
       - run: npm run test:ui
+      - run: npm run test:worker
+      - run: npm run build:pilot:test
+      - run: npm run test:pilot:ui
+      - run: npm run build:pilot
+      - run: npm run check:pilot
       - run: docker build -t samplanering-test .
       - name: Check container startup
         run: |

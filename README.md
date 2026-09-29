@@ -4,6 +4,10 @@ Planera tillsammans och gör arbetet direkt i uppgiftens dokument. Svenska, avsk
 
 Tre etapper är implementerade: gemensam tavla och arbetsdokument; mallar, egna fält och vyer; samordning, automation och uppföljning. Detta är en fungerande prototyp för en testgrupp, med riktig inloggning och gemensam serverlagring.
 
+## Gratis molnpilot
+
+[Cloudflare + Firebase Auth](docs/PILOT.md) kör appen, teamdata och bilagor på Cloudflare och inloggningen i Firebase-projektet `planner-tensetti`. Konfiguration, kvoter och tester är förberedda. Publicering kräver kontoåtkomst och webbappens Firebase-konfiguration; ingen publik adress är ännu verifierad.
+
 ## Starta på din dator
 
 Kräver Node.js 24.
@@ -47,7 +51,7 @@ Se [drift och gemensam testadress](docs/DRIFT.md) för lokalt nätverk eller HTT
 
 Ändringar syns hos andra användare via serverhändelser. Olika dokumentblock kan redigeras parallellt. Om två personer ändrar **samma block** behålls utkastet och användaren får välja version. Det är inte teckenvis samskrivning som i Google Docs.
 
-Inloggning använder lösenord. E-postverifiering, lösenordsåterställning, SSO, e-postutskick och externa integrationer ingår inte. Notiser finns inne i appen. Ingen AI-tjänst är inkopplad. Appen kör en serverinstans med beständig SQLite-lagring; kapaciteten är inte belastningstestad för stora organisationer.
+Inloggning använder lösenord. Firebase-varianten har lösenordsåterställning via e-post. Node-varianten saknar lösenordsåterställning. E-postverifiering, SSO, övriga e-postutskick och externa integrationer ingår inte. Notiser finns inne i appen. Ingen AI-tjänst är inkopplad. Node-varianten kör en serverinstans med beständig SQLite-lagring. Cloudflare-varianten använder en SQLite-arbetsyta per team. Kapaciteten är inte belastningstestad för stora organisationer.
 
 ## Utveckling och verifiering
 
