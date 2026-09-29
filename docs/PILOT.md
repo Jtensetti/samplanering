@@ -1,6 +1,6 @@
 # Pilot på Cloudflare med Firebase-inloggning
 
-Appen kan köras på Cloudflare Workers Free. Firebase-projektet är **planner-tensetti**, projektnummer **817306734982**. Webbappen **Samplanering pilot** är registrerad och dess publika SDK-konfiguration finns i `wrangler.jsonc`. Ingen publik instans har ännu verifierats. Aktivering av Email/Password och Cloudflare-åtkomst återstår.
+Appen kan köras på Cloudflare Workers Free. Firebase-projektet är **planner-tensetti**, projektnummer **817306734982**. Webbappen **Samplanering pilot** är registrerad och dess publika SDK-konfiguration finns i `wrangler.jsonc`. Ingen publik instans har ännu verifierats. Email/Password är aktiverat. Cloudflare-åtkomst återstår.
 
 ## Vad körs var?
 
