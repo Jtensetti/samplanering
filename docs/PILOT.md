@@ -1,6 +1,6 @@
 # Pilot på Cloudflare med Firebase-inloggning
 
-Appen kan köras på Cloudflare Workers Free. Firebase-projektet är **planner-tensetti**, projektnummer **817306734982**. Webbappen **Samplanering pilot** är registrerad och dess publika SDK-konfiguration finns i `wrangler.jsonc`. Ingen publik instans har ännu verifierats. Email/Password är aktiverat. Cloudflare-åtkomst återstår.
+Appen kan köras på Cloudflare Workers Free. Firebase-projektet är **planner-tensetti**, projektnummer **817306734982**. Webbappen **Samplanering pilot** är registrerad; projekt-id och app-id finns i `wrangler.jsonc`. API-nyckeln anges via `.dev.vars` eller miljön vid publicering. Ingen publik instans har ännu verifierats. Email/Password är aktiverat. Cloudflare-åtkomst och kontroll av nyckelns API-begränsningar återstår.
 
 ## Vad körs var?
 
@@ -20,7 +20,7 @@ Samma verksamhetslogik används i Node-servern och Cloudflare-versionen. Firesto
 1. I [Firebase Console](https://console.firebase.google.com/project/planner-tensetti/overview): registrera en webbapp under projektinställningarna om ingen finns. Kopiera dess publika `apiKey` och `appId`. Projektnumret är inte ett app-id.
 2. Aktivera **Authentication → Sign-in method → Email/Password**. Appen använder lösenord med minst 12 tecken; sätt samma minimilängd i Firebase Auths lösenordspolicy. E-postverifiering krävs inte i den här piloten. Google-inloggning och SMS används inte.
 3. Logga in på Cloudflare med `npx wrangler login`. Välj avsett konto med **Workers Free**. Om du har flera konton kan `CLOUDFLARE_ACCOUNT_ID` sättas i din lokala miljö. Skriptet uppgraderar ingen betalplan.
-4. Pilotens `FIREBASE_API_KEY` och `FIREBASE_APP_ID` finns redan i `wrangler.jsonc`. Detta är publik klientkonfiguration, inte ett servicekonto eller en administratörsnyckel. Vid behov kan `.dev.vars.example` kopieras till `.dev.vars` för lokala åsidosättningar; den filen ignoreras av Git.
+4. Kopiera `.dev.vars.example` till `.dev.vars` och fyll i `FIREBASE_API_KEY`, eller sätt den som miljövariabel. `.dev.vars` ignoreras av Git. `FIREBASE_APP_ID` finns redan i `wrangler.jsonc` och kan vid behov åsidosättas på samma sätt. Kontrollera före publicering nyckelns **API restrictions** i [Google Cloud → APIs & Services → Credentials](https://console.cloud.google.com/apis/credentials?project=planner-tensetti): tillåt de Firebase-API:er som appen behöver, utan andra API:er som exempelvis Generative Language API.
 5. Kör följande med Node.js 24:
 
 ```sh
@@ -33,6 +33,12 @@ Skriptet bygger rätt frontend och blockerar emulatorinställningar. Wrangler sk
 
 6. Lägg den faktiska `planner-tensetti.<ditt-konto>.workers.dev`-domänen i **Authentication → Settings → Authorized domains**. En eventuell egen domän behöver också läggas till. Lägg inte till protokoll eller sökväg.
 7. Kontrollera `/api/health`, `/api/config`, registrering, inloggning och lösenordsåterställning på den publicerade adressen. Skapa ett team, bjud in en kollega och prova samtidig redigering och en bilaga. En lyckad health-kontroll bevisar inte att Firebase är konfigurerat.
+
+## API-nyckel och säkerhetslarm
+
+Firebase-webbappens API-nyckel är publik klientkonfiguration och skickas till webbläsaren via `/api/config`. Att läsa den från miljön håller den utanför nya kodändringar men gör den inte hemlig i appen. Den ger inte administratörsbehörighet. Korrekt begränsning till Firebase-API:er är fortfarande nödvändig; se [Firebases dokumentation om API-nycklar](https://firebase.google.com/docs/projects/api-keys). Appens API skyddas separat med verifierade Firebase-token och teambehörigheter.
+
+Nyckeln fanns i tidigare commit och är kvar i Git-historiken. [GitHubs säkerhetslarm #1](https://github.com/Jtensetti/samplanering/security/secret-scanning/1) har inte kunnat granskas i den tillgängliga sessionen och har inte stängts. Nyckelns faktiska API-begränsningar är ännu inte verifierade. Kontrollera att larmet avser denna klientnyckel och granska begränsningarna innan larmet klassificeras eller stängs. Om nyckeln också kan användas för andra tjänster behöver den begränsas och eventuell rotation bedömas utifrån exponeringen och övriga appar som använder den.
 
 ## Gratisnivå och pilotens gränser
 
