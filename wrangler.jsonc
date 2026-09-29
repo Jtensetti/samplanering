@@ -26,7 +26,9 @@
   "migrations": [
     { "tag": "v1", "new_sqlite_classes": ["Workspace", "UserDirectory"] },
   ],
-  "kv_namespaces": [{ "binding": "FILES" }],
+  "kv_namespaces": [
+    { "binding": "FILES", "id": "94ad1ebe49204a3482395a4ca17b31e2" },
+  ],
   "ratelimits": [
     {
       "name": "REQUEST_LIMIT",

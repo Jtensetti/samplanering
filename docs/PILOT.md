@@ -1,6 +1,6 @@
 # Pilot på Cloudflare med Firebase-inloggning
 
-Appen kan köras på Cloudflare Workers Free. Firebase-projektet är **planner-tensetti**, projektnummer **817306734982**. Webbappen **Samplanering pilot** är registrerad; projekt-id och app-id finns i `wrangler.jsonc`. API-nyckeln anges via `.dev.vars` eller miljön vid publicering. Ingen publik instans har ännu verifierats. Email/Password är aktiverat. Cloudflare-åtkomst återstår. Nyckelns inställningar har granskats via användarens skärmbilder; se säkerhetsbedömningen nedan.
+Piloten är publicerad på `https://planner-tensetti.jonatan-tensetti.workers.dev`. Firebase-projektet är **planner-tensetti**, projektnummer **817306734982**. Webbappen **Samplanering pilot** är registrerad; projekt-id och app-id finns i `wrangler.jsonc`. API-nyckeln anges via `.dev.vars` eller miljön vid publicering. Email/Password är aktiverat. Den publika inloggnings- och registreringsvyn har öppnats, men autentisering och teamflöden behöver fortfarande provas med riktiga konton. Nyckelns inställningar har granskats via användarens skärmbilder; se säkerhetsbedömningen nedan.
 
 ## Vad körs var?
 
@@ -31,7 +31,7 @@ npm run deploy:pilot
 
 Skriptet bygger rätt frontend och blockerar emulatorinställningar. Wrangler skapar Worker, SQLite-namnrymder och KV-bindning. Behåll eventuella resurs-id:n som Wrangler skriver till `wrangler.jsonc` inför nästa publicering. Konton och teamdata ligger kvar vid en vanlig koduppdatering.
 
-6. Lägg den faktiska `planner-tensetti.<ditt-konto>.workers.dev`-domänen i **Authentication → Settings → Authorized domains**. En eventuell egen domän behöver också läggas till. Lägg inte till protokoll eller sökväg.
+6. För denna pilot med e-post och lösenord behöver `workers.dev`-domänen inte läggas till under **Authentication → Settings → Authorized domains**. Den listan används bland annat för OAuth-omdirigeringar och `continueUrl` i e-poståtgärder. Om någon sådan funktion aktiveras senare, lägg till den faktiska domänen då och prova flödet separat.
 7. Kontrollera `/api/health`, `/api/config`, registrering, inloggning och lösenordsåterställning på den publicerade adressen. Skapa ett team, bjud in en kollega och prova samtidig redigering och en bilaga. En lyckad health-kontroll bevisar inte att Firebase är konfigurerat.
 
 ## API-nyckel och säkerhetslarm
