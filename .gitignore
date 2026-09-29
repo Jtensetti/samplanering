@@ -6,3 +6,12 @@ test-results/
 playwright-report/
 *.log
 .test-data/
+.wrangler/
+.dev.vars
+.dev.vars.*
+!.dev.vars.example
+.firebase/
+*debug.log
+.pilot-dist/
+.pilot-test-data/
+.pilot-deploy.json

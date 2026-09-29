@@ -4,6 +4,10 @@ Planera tillsammans och gör arbetet direkt i uppgiftens dokument. Svenska, avsk
 
 Tre etapper är implementerade: gemensam tavla och arbetsdokument; mallar, egna fält och vyer; samordning, automation och uppföljning. Detta är en fungerande prototyp för en testgrupp, med riktig inloggning och gemensam serverlagring.
 
+## Gratis molnpilot
+
+[Cloudflare + Firebase Auth](docs/PILOT.md) kör appen, teamdata och bilagor på Cloudflare och inloggningen i Firebase-projektet `planner-tensetti`. Piloten är publicerad på [planner-tensetti.jonatan-tensetti.workers.dev](https://planner-tensetti.jonatan-tensetti.workers.dev). Webbappen är registrerad; dess API-nyckel anges via `.dev.vars` eller miljön vid publicering. Email/Password är aktiverat. Nyckelns inställningar är granskade via skärmbilder; rekommenderad begränsning för pilotens inloggning finns i driftguiden. Registrering, inloggning och samarbete på den publicerade adressen återstår att prova med riktiga konton.
+
 ## Starta på din dator
 
 Kräver Node.js 24.
@@ -47,7 +51,7 @@ Se [drift och gemensam testadress](docs/DRIFT.md) för lokalt nätverk eller HTT
 
 Ändringar syns hos andra användare via serverhändelser. Olika dokumentblock kan redigeras parallellt. Om två personer ändrar **samma block** behålls utkastet och användaren får välja version. Det är inte teckenvis samskrivning som i Google Docs.
 
-Inloggning använder lösenord. E-postverifiering, lösenordsåterställning, SSO, e-postutskick och externa integrationer ingår inte. Notiser finns inne i appen. Ingen AI-tjänst är inkopplad. Appen kör en serverinstans med beständig SQLite-lagring; kapaciteten är inte belastningstestad för stora organisationer.
+Inloggning använder lösenord. Firebase-varianten har lösenordsåterställning via e-post. Node-varianten saknar lösenordsåterställning. E-postverifiering, SSO, övriga e-postutskick och externa integrationer ingår inte. Notiser finns inne i appen. Ingen AI-tjänst är inkopplad. Node-varianten kör en serverinstans med beständig SQLite-lagring. Cloudflare-varianten använder en SQLite-arbetsyta per team. Kapaciteten är inte belastningstestad för stora organisationer.
 
 ## Utveckling och verifiering
 

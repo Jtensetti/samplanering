@@ -1,0 +1,4 @@
+# Public Firebase Web API key from Project settings > Your apps > Web app.
+FIREBASE_API_KEY=
+# Optional: the web app's real App ID, not the project number.
+FIREBASE_APP_ID=

@@ -19,7 +19,7 @@ import {
   History,
   ChevronDown,
 } from "lucide-react";
-import { api, useApp, today } from "./store";
+import { api, useApp, today, firebaseMode } from "./store";
 import {
   Button,
   IconButton,
@@ -440,12 +440,13 @@ function Nav({ icon: Icon, children, active, onClick }) {
   );
 }
 function Auth() {
-  const { setUser, refreshTeams } = useApp(),
+  const { setUser, refreshTeams, notice } = useApp(),
     [register, setRegister] = useState(false),
     [name, setName] = useState(""),
     [email, setEmail] = useState(""),
     [password, setPassword] = useState(""),
     [error, setError] = useState(""),
+    [sent, setSent] = useState(false),
     [busy, setBusy] = useState(false);
   return (
     <div className="auth-page">
@@ -467,13 +468,13 @@ function Auth() {
                 method: "POST",
                 body: { email, password, ...(register ? { name } : {}) },
               });
-              setUser(u);
               const token = new URLSearchParams(location.search).get("invite");
               if (token) {
                 await api("/join", { method: "POST", body: { token } });
                 history.replaceState(null, "", location.pathname);
               }
               await refreshTeams();
+              setUser(u);
             } catch (e) {
               setError(e.message);
             } finally {
@@ -516,15 +517,47 @@ function Auth() {
               onChange={(e) => setPassword(e.target.value)}
             />
           </Field>
-          {error && (
+          {(error || notice?.error) && (
             <p role="alert" className="inline-error">
-              {error}
+              {error || notice.text}
             </p>
           )}
           <Button variant="primary" disabled={busy}>
             {busy ? "Vänta…" : register ? "Skapa konto" : "Logga in"}
           </Button>
         </form>
+        {firebaseMode && !register && (
+          <>
+            <Button
+              variant="text"
+              disabled={busy}
+              onClick={async () => {
+                setBusy(true);
+                setError("");
+                setSent(false);
+                try {
+                  await api("/reset-password", {
+                    method: "POST",
+                    body: { email },
+                  });
+                  setSent(true);
+                } catch (e) {
+                  setError(e.message);
+                } finally {
+                  setBusy(false);
+                }
+              }}
+            >
+              Glömt lösenord?
+            </Button>
+            {sent && (
+              <p role="status">
+                Om adressen har ett konto får du ett mejl för att välja nytt
+                lösenord.
+              </p>
+            )}
+          </>
+        )}
         <Button
           variant="text"
           onClick={() => {
@@ -543,7 +576,8 @@ function Auth() {
 function Welcome() {
   const { refreshTeams, setTeamId, act, user } = useApp(),
     [name, setName] = useState(""),
-    [error, setError] = useState("");
+    [busy, setBusy] = useState(false),
+    [requestId] = useState(() => crypto.randomUUID());
   return (
     <div className="auth-page">
       <div className="auth-card">
@@ -552,11 +586,17 @@ function Welcome() {
         <form
           onSubmit={(e) => {
             e.preventDefault();
+            if (busy) return;
+            setBusy(true);
             act(async () => {
-              const t = await api("/teams", { method: "POST", body: { name } });
+              const t = await api("/teams", {
+                method: "POST",
+                body: { name },
+                headers: { "Idempotency-Key": requestId },
+              });
               await refreshTeams();
               setTeamId(t.id);
-            });
+            }).finally(() => setBusy(false));
           }}
         >
           <Field label="Teamets namn">
@@ -569,7 +609,9 @@ function Welcome() {
               onChange={(e) => setName(e.target.value)}
             />
           </Field>
-          <Button variant="primary">Skapa team</Button>
+          <Button variant="primary" disabled={busy}>
+            {busy ? "Skapar…" : "Skapa team"}
+          </Button>
         </form>
         <JoinTeam />
       </div>

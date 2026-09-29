@@ -6,6 +6,7 @@ COPY index.html vite.config.mjs ./
 COPY src ./src
 COPY public ./public
 COPY shared ./shared
+COPY server/schema.mjs ./server/schema.mjs
 RUN npm run build
 
 FROM node:24-bookworm-slim AS runtime

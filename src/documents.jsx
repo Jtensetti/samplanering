@@ -7,7 +7,7 @@ import {
   Paperclip,
   MoreHorizontal,
 } from "lucide-react";
-import { api, useApp } from "./store";
+import { api, useApp, firebaseMode } from "./store";
 import { Button, IconButton, DraftText, TextArea, Field } from "./ui";
 export const blockNames = {
   text: "Text",
@@ -529,25 +529,68 @@ function Block({ block: b, previous, next }) {
           )}
         </>
       )}
-      {["file", "image"].includes(d.type) && (
-        <>
-          {d.type === "image" && (
-            <img
-              className="attachment-image"
-              src={"/api/files/" + d.fileId}
-              alt={d.title}
-            />
-          )}
-          <a
-            href={"/api/files/" + d.fileId}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            {d.title || "Öppna bilaga"}
-          </a>
-        </>
-      )}
+      {["file", "image"].includes(d.type) && <Attachment block={b} />}
     </div>
+  );
+}
+function Attachment({ block }) {
+  const { body: d } = block;
+  const [url, setUrl] = useState(firebaseMode ? "" : "/api/files/" + d.fileId);
+  const [error, setError] = useState("");
+  const [retry, setRetry] = useState(0);
+  useEffect(() => {
+    if (!firebaseMode) return;
+    let live = true,
+      objectUrl;
+    setUrl("");
+    setError("");
+    import("./firebase-client.mjs")
+      .then(async (adapter) => {
+        const response = await adapter.response(
+          "/files/" + d.fileId,
+          {},
+          block.team_id,
+        );
+        if (!response.ok)
+          throw new Error(
+            (await response.json()).error || "Filen kunde inte öppnas.",
+          );
+        objectUrl = URL.createObjectURL(await response.blob());
+        if (live) setUrl(objectUrl);
+        else URL.revokeObjectURL(objectUrl);
+      })
+      .catch((e) => {
+        if (live) setError(e.message);
+      });
+    return () => {
+      live = false;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [d.fileId, block.team_id, retry]);
+  if (error)
+    return (
+      <div role="alert">
+        {error}{" "}
+        <Button variant="ghost" onClick={() => setRetry((x) => x + 1)}>
+          Försök igen
+        </Button>
+      </div>
+    );
+  if (!url) return <span role="status">Hämtar bilaga…</span>;
+  return (
+    <>
+      {d.type === "image" && (
+        <img className="attachment-image" src={url} alt={d.title} />
+      )}
+      <a
+        href={url}
+        download={firebaseMode ? d.title || "Bilaga" : undefined}
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        {d.title || "Öppna bilaga"}
+      </a>
+    </>
   );
 }
 export function Comments({ record }) {

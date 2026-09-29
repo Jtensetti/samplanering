@@ -1,5 +1,7 @@
 # Kör Samplanering för en testgrupp
 
+För molnpiloten med Firebase-inloggning, se [Cloudflare + Firebase Auth](PILOT.md). Resten av denna guide gäller den fristående Node-/Docker-versionen.
+
 ## En gemensam server
 
 Alla deltagare ska öppna samma adress. Att var och en startar appen på sin dator ger separata databaser. Kör en enda appinstans med beständig disk. Säkerhetskopiera både databas och bilagor.

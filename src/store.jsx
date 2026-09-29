@@ -6,7 +6,16 @@ import React, {
   useRef,
   useState,
 } from "react";
+export const firebaseMode = import.meta.env.VITE_BACKEND === "firebase";
+let requestTeam = "";
+const firebase = () => import("./firebase-client.mjs");
 export async function api(path, options = {}) {
+  if (firebaseMode)
+    return (await firebase()).request(
+      path,
+      options,
+      options.teamId || requestTeam,
+    );
   const res = await fetch("/api" + path, {
     credentials: "same-origin",
     ...options,
@@ -41,6 +50,9 @@ export function Provider({ children }) {
     [notice, setNotice] = useState(null),
     [online, setOnline] = useState(true);
   const seq = useRef(0);
+  useEffect(() => {
+    requestTeam = teamId;
+  }, [teamId]);
   const refreshTeams = useCallback(async () => {
     const t = await api("/teams");
     setTeams(t);
@@ -89,23 +101,47 @@ export function Provider({ children }) {
   }, [teamId, user, reload]);
   useEffect(() => {
     if (!teamId || !user) return;
-    const s = new EventSource("/api/events?team=" + teamId);
-    let timer;
+    let timer,
+      close = () => {},
+      stopped = false;
     const change = () => {
       clearTimeout(timer);
       timer = setTimeout(() => reload().catch(() => {}), 80);
     };
-    s.addEventListener("ready", () => {
+    const ready = () => {
       setOnline(true);
       change();
-    });
-    s.addEventListener("change", change);
-    s.onerror = () => setOnline(false);
-    const poll = setInterval(change, 20000);
+    };
+    const error = () => setOnline(false);
+    if (firebaseMode) {
+      firebase()
+        .then((adapter) => {
+          if (!stopped) close = adapter.subscribe(teamId, ready, change, error);
+        })
+        .catch(error);
+    } else {
+      const stream = new EventSource("/api/events?team=" + teamId);
+      stream.addEventListener("ready", ready);
+      stream.addEventListener("change", change);
+      stream.onerror = error;
+      close = () => stream.close();
+    }
+    const poll = setInterval(
+      () => {
+        if (document.visibilityState === "visible") change();
+      },
+      firebaseMode ? 60000 : 20000,
+    );
+    const visible = () => {
+      if (document.visibilityState === "visible") change();
+    };
+    document.addEventListener("visibilitychange", visible);
     return () => {
-      s.close();
+      stopped = true;
+      close();
       clearTimeout(timer);
       clearInterval(poll);
+      document.removeEventListener("visibilitychange", visible);
     };
   }, [teamId, user, reload]);
   const act = async (fn) => {
